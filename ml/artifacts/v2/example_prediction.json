@@ -1,0 +1,11 @@
+{
+  "predictions": {
+    "Average_Air_Temperature_C": 8.950888750000003,
+    "Minimum_Air_Temperature_C": 8.14043333333334,
+    "Maximum_Air_Temperature_C": 10.232678060440474,
+    "Solar_Heat_Input_W": 6030.509911807658,
+    "Heat_Transfer_Rate_W": -382.2051895609289,
+    "Thermal_Energy_Loss_Wh": 16798.31178323194
+  },
+  "warnings": []
+}

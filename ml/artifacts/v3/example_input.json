@@ -1,0 +1,23 @@
+{
+  "Material": "Polyurethane foam (PU)",
+  "Material_Category": "Insulation",
+  "Thermal_Conductivity_W_mK": 0.0279,
+  "Density_kg_m3": 33.3,
+  "Specific_Heat_J_kgK": 1427.5,
+  "Wall_Thickness_m": 0.152,
+  "Shelter_Length_m": 4.75,
+  "Shelter_Width_m": 3.36,
+  "Shelter_Height_m": 2.71,
+  "Opening_Area_m2": 4.04,
+  "Window_Area_m2": 2.36,
+  "Door_Area_m2": 1.68,
+  "Orientation_deg": 270,
+  "External_Temperature_C": 9.67,
+  "Initial_Air_Temperature_C": 18.35,
+  "Solar_Radiation_W_m2": 848.9,
+  "Daily_Solar_Energy_kWh_m2": 5.093,
+  "Wind_Speed_m_s": 11.13,
+  "Relative_Humidity_percent": 76.0,
+  "Simulation_Duration_h": 16.0,
+  "Time_Step_min": 1
+}

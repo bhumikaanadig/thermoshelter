@@ -1,0 +1,23 @@
+{
+  "Material": "Wood / timber",
+  "Material_Category": "Timber",
+  "Thermal_Conductivity_W_mK": 0.1903,
+  "Density_kg_m3": 426.1,
+  "Specific_Heat_J_kgK": 2382.5,
+  "Wall_Thickness_m": 0.076,
+  "Shelter_Length_m": 5.4,
+  "Shelter_Width_m": 3.87,
+  "Shelter_Height_m": 2.2,
+  "Opening_Area_m2": 5.33,
+  "Window_Area_m2": 3.03,
+  "Door_Area_m2": 2.3,
+  "Orientation_deg": 315,
+  "External_Temperature_C": -2.53,
+  "Initial_Air_Temperature_C": 20.14,
+  "Solar_Radiation_W_m2": 1233.2,
+  "Daily_Solar_Energy_kWh_m2": 7.399,
+  "Wind_Speed_m_s": 10.78,
+  "Relative_Humidity_percent": 20.3,
+  "Simulation_Duration_h": 44.3,
+  "Time_Step_min": 15
+}

@@ -1,0 +1,10 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // THERMOSHELTER accesses Firestore only from its FastAPI Admin SDK.
+    // Client SDK access is denied; Admin credentials must never reach the browser.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

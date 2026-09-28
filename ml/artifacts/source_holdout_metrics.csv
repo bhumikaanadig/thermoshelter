@@ -1,0 +1,7 @@
+target,status,reason
+Average_Air_Temperature_C,not_applicable,Only one compatible Dataset_Source was used for this fit.
+Minimum_Air_Temperature_C,not_applicable,Only one compatible Dataset_Source was used for this fit.
+Maximum_Air_Temperature_C,not_applicable,Only one compatible Dataset_Source was used for this fit.
+Solar_Heat_Input_W,not_applicable,Only one compatible Dataset_Source was used for this fit.
+Heat_Transfer_Rate_W,not_applicable,Only one compatible Dataset_Source was used for this fit.
+Thermal_Energy_Loss_Wh,not_applicable,Only one compatible Dataset_Source was used for this fit.

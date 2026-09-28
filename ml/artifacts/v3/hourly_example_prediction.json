@@ -1,0 +1,232 @@
+{
+  "verification_case_id": "CASE_03781",
+  "dataset_source": "ladakh_shelter_1500_batch3_physics_informed_dataset.xlsx",
+  "case_inputs": {
+    "Material": "Rock wool / mineral wool",
+    "Material_Category": "Insulation",
+    "Thermal_Conductivity_W_mK": 0.0463,
+    "Density_kg_m3": 78.0,
+    "Specific_Heat_J_kgK": 838.7,
+    "Wall_Thickness_m": 0.103,
+    "Shelter_Length_m": 4.41,
+    "Shelter_Width_m": 3.92,
+    "Shelter_Height_m": 2.43,
+    "Opening_Area_m2": 5.75,
+    "Window_Area_m2": 2.99,
+    "Door_Area_m2": 2.76,
+    "Orientation_deg": 180.0,
+    "External_Temperature_C": -14.69,
+    "Initial_Air_Temperature_C": 24.0,
+    "Solar_Radiation_W_m2": 529.2,
+    "Daily_Solar_Energy_kWh_m2": 3.175,
+    "Wind_Speed_m_s": 2.07,
+    "Relative_Humidity_percent": 68.0,
+    "Simulation_Duration_h": 14.3,
+    "Time_Step_min": 2.0
+  },
+  "hourly_climate": [
+    {
+      "Hour": 0,
+      "Outdoor_Temperature_C": -19.0,
+      "Solar_Radiation_W_m2": 0.0,
+      "Wind_Speed_m_s": 2.07
+    },
+    {
+      "Hour": 1,
+      "Outdoor_Temperature_C": -19.0,
+      "Solar_Radiation_W_m2": 0.0,
+      "Wind_Speed_m_s": 2.49
+    },
+    {
+      "Hour": 2,
+      "Outdoor_Temperature_C": -19.0,
+      "Solar_Radiation_W_m2": 0.0,
+      "Wind_Speed_m_s": 2.86
+    },
+    {
+      "Hour": 3,
+      "Outdoor_Temperature_C": -21.87,
+      "Solar_Radiation_W_m2": 0.0,
+      "Wind_Speed_m_s": 3.1
+    },
+    {
+      "Hour": 4,
+      "Outdoor_Temperature_C": -21.63,
+      "Solar_Radiation_W_m2": 0.0,
+      "Wind_Speed_m_s": 3.35
+    },
+    {
+      "Hour": 5,
+      "Outdoor_Temperature_C": -20.91,
+      "Solar_Radiation_W_m2": 0.0,
+      "Wind_Speed_m_s": 3.44
+    },
+    {
+      "Hour": 6,
+      "Outdoor_Temperature_C": -19.77,
+      "Solar_Radiation_W_m2": 0.0,
+      "Wind_Speed_m_s": 3.56
+    },
+    {
+      "Hour": 7,
+      "Outdoor_Temperature_C": -18.28,
+      "Solar_Radiation_W_m2": 137.0,
+      "Wind_Speed_m_s": 3.57
+    },
+    {
+      "Hour": 8,
+      "Outdoor_Temperature_C": -16.55,
+      "Solar_Radiation_W_m2": 264.6,
+      "Wind_Speed_m_s": 3.39
+    },
+    {
+      "Hour": 9,
+      "Outdoor_Temperature_C": -14.69,
+      "Solar_Radiation_W_m2": 374.2,
+      "Wind_Speed_m_s": 3.21
+    },
+    {
+      "Hour": 10,
+      "Outdoor_Temperature_C": -12.83,
+      "Solar_Radiation_W_m2": 458.3,
+      "Wind_Speed_m_s": 2.83
+    },
+    {
+      "Hour": 11,
+      "Outdoor_Temperature_C": -11.1,
+      "Solar_Radiation_W_m2": 511.2,
+      "Wind_Speed_m_s": 2.47
+    },
+    {
+      "Hour": 12,
+      "Outdoor_Temperature_C": -9.61,
+      "Solar_Radiation_W_m2": 529.2,
+      "Wind_Speed_m_s": 2.07
+    },
+    {
+      "Hour": 13,
+      "Outdoor_Temperature_C": -8.47,
+      "Solar_Radiation_W_m2": 511.2,
+      "Wind_Speed_m_s": 1.7
+    },
+    {
+      "Hour": 14,
+      "Outdoor_Temperature_C": -7.75,
+      "Solar_Radiation_W_m2": 458.3,
+      "Wind_Speed_m_s": 1.32
+    },
+    {
+      "Hour": 15,
+      "Outdoor_Temperature_C": -7.51,
+      "Solar_Radiation_W_m2": 374.2,
+      "Wind_Speed_m_s": 1.08
+    },
+    {
+      "Hour": 16,
+      "Outdoor_Temperature_C": -7.75,
+      "Solar_Radiation_W_m2": 264.6,
+      "Wind_Speed_m_s": 0.81
+    },
+    {
+      "Hour": 17,
+      "Outdoor_Temperature_C": -8.47,
+      "Solar_Radiation_W_m2": 137.0,
+      "Wind_Speed_m_s": 0.61
+    },
+    {
+      "Hour": 18,
+      "Outdoor_Temperature_C": -9.61,
+      "Solar_Radiation_W_m2": 0.0,
+      "Wind_Speed_m_s": 0.58
+    },
+    {
+      "Hour": 19,
+      "Outdoor_Temperature_C": -11.1,
+      "Solar_Radiation_W_m2": 0.0,
+      "Wind_Speed_m_s": 0.59
+    },
+    {
+      "Hour": 20,
+      "Outdoor_Temperature_C": -12.83,
+      "Solar_Radiation_W_m2": 0.0,
+      "Wind_Speed_m_s": 0.85
+    },
+    {
+      "Hour": 21,
+      "Outdoor_Temperature_C": -14.69,
+      "Solar_Radiation_W_m2": 0.0,
+      "Wind_Speed_m_s": 1.03
+    },
+    {
+      "Hour": 22,
+      "Outdoor_Temperature_C": -19.0,
+      "Solar_Radiation_W_m2": 0.0,
+      "Wind_Speed_m_s": 1.28
+    },
+    {
+      "Hour": 23,
+      "Outdoor_Temperature_C": -19.0,
+      "Solar_Radiation_W_m2": 0.0,
+      "Wind_Speed_m_s": 1.69
+    }
+  ],
+  "prediction": {
+    "model_version": "V3-Hourly-v1",
+    "hours": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23
+    ],
+    "predicted_indoor_temperature_C": [
+      9.111048801149352,
+      9.093575872329577,
+      9.05014590239642,
+      8.265731376457317,
+      8.271505902802264,
+      8.528168797677994,
+      8.626569306417194,
+      9.066015992541967,
+      10.017582155920758,
+      10.54561438832966,
+      11.416529762679655,
+      11.615891953584411,
+      12.224092667922768,
+      12.625713395016898,
+      12.985329831020904,
+      13.181830800984203,
+      12.984376931816959,
+      12.62229364470014,
+      12.210611914400038,
+      11.661754712571026,
+      11.446717628229134,
+      10.584258100136903,
+      9.157304060794335,
+      9.151729498598021
+    ],
+    "diagnostics": {
+      "out_of_observed_range": [],
+      "message": null
+    }
+  }
+}

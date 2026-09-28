@@ -1,0 +1,105 @@
+filename,column,dtype,missing,unique,value_counts,nonfinite,min,q1,median,q3,max,iqr_outliers
+ladakh_shelter_1500_batch3_physics_informed_dataset.csv,Case_ID,str,0,1500,omitted for high-cardinality column (1500 unique values),,,,,,,
+ladakh_shelter_1500_batch3_physics_informed_dataset.csv,Material,str,0,9,"{'Aerated concrete / AAC': 180, 'Wood / timber': 180, 'Polyurethane foam (PU)': 180, 'Brick': 180, 'Rock wool / mineral wool': 180, 'Composite insulated wall': 180, 'Aluminum': 140, 'EPS insulation': 140, 'Concrete': 140}",,,,,,,
+ladakh_shelter_1500_batch3_physics_informed_dataset.csv,Material_Category,str,0,5,"{'Masonry': 500, 'Insulation': 500, 'Timber': 180, 'Composite': 180, 'Metal': 140}",,,,,,,
+ladakh_shelter_1500_batch3_physics_informed_dataset.csv,Thermal_Conductivity_W_mK,float64,0,1181,,0.0,0.0201,0.0431,0.12890000000000001,0.754125,219.9915,170.0
+ladakh_shelter_1500_batch3_physics_informed_dataset.csv,Density_kg_m3,float64,0,1181,,0.0,15.1,49.175000000000004,547.95,1810.6,2700.0,0.0
+ladakh_shelter_1500_batch3_physics_informed_dataset.csv,Specific_Heat_J_kgK,float64,0,1294,,0.0,800.2,896.0,971.75,1406.1499999999999,2496.7,43.0
+ladakh_shelter_1500_batch3_physics_informed_dataset.csv,Wall_Thickness_m,float64,0,351,,0.0,0.05,0.13775,0.225,0.31225,0.4,0.0
+ladakh_shelter_1500_batch3_physics_informed_dataset.csv,Shelter_Length_m,float64,0,301,,0.0,3.0,3.75,4.5,5.25,6.0,0.0
+ladakh_shelter_1500_batch3_physics_informed_dataset.csv,Shelter_Width_m,float64,0,251,,0.0,2.5,3.1275,3.75,4.3725000000000005,5.0,0.0
+ladakh_shelter_1500_batch3_physics_informed_dataset.csv,Shelter_Height_m,float64,0,131,,0.0,2.2,2.5275,2.85,3.1725,3.5,0.0
+ladakh_shelter_1500_batch3_physics_informed_dataset.csv,Opening_Area_m2,float64,0,821,,0.0,1.55,4.577500000000001,6.71,9.0825,16.47,2.0
+ladakh_shelter_1500_batch3_physics_informed_dataset.csv,Window_Area_m2,float64,0,806,,0.0,0.0,2.3075,4.495,6.84,14.19,1.0
+ladakh_shelter_1500_batch3_physics_informed_dataset.csv,Door_Area_m2,float64,0,151,,0.0,1.5,1.8775,2.25,2.6225,3.0,0.0
+ladakh_shelter_1500_batch3_physics_informed_dataset.csv,Orientation_deg,int64,0,8,,0.0,0.0,78.75,157.5,236.25,315.0,0.0
+ladakh_shelter_1500_batch3_physics_informed_dataset.csv,External_Temperature_C,float64,0,1468,,0.0,-20.0,-7.6875,4.99,19.744999999999997,39.94,0.0
+ladakh_shelter_1500_batch3_physics_informed_dataset.csv,Initial_Air_Temperature_C,float64,0,1360,,0.0,5.01,10.0,15.004999999999999,20.0025,24.99,0.0
+ladakh_shelter_1500_batch3_physics_informed_dataset.csv,Solar_Radiation_W_m2,float64,0,1492,,0.0,334.0,583.7,833.3,1082.95,1333.0,0.0
+ladakh_shelter_1500_batch3_physics_informed_dataset.csv,Daily_Solar_Energy_kWh_m2,float64,0,1472,,0.0,2.004,3.5020000000000002,5.0,6.498,7.998,0.0
+ladakh_shelter_1500_batch3_physics_informed_dataset.csv,Wind_Speed_m_s,float64,0,1108,,0.0,0.0,3.0075,5.995,9.0,12.0,0.0
+ladakh_shelter_1500_batch3_physics_informed_dataset.csv,Relative_Humidity_percent,float64,0,701,,0.0,10.0,27.5,45.0,62.5,80.0,0.0
+ladakh_shelter_1500_batch3_physics_informed_dataset.csv,Simulation_Duration_h,float64,0,421,,0.0,6.0,16.5,27.0,37.5,48.0,0.0
+ladakh_shelter_1500_batch3_physics_informed_dataset.csv,Time_Step_min,int64,0,6,,0.0,1.0,2.0,5.0,15.0,30.0,0.0
+ladakh_shelter_1500_batch3_physics_informed_dataset.csv,Average_Air_Temperature_C,float64,0,1467,,0.0,-7.959,3.8200000000000003,10.1415,17.4455,31.481,0.0
+ladakh_shelter_1500_batch3_physics_informed_dataset.csv,Minimum_Air_Temperature_C,float64,0,1207,,0.0,-9.35,2.8025,9.245,16.655,30.79,0.0
+ladakh_shelter_1500_batch3_physics_informed_dataset.csv,Maximum_Air_Temperature_C,float64,0,1222,,0.0,-5.87,4.89,11.47,18.7,33.5,0.0
+ladakh_shelter_1500_batch3_physics_informed_dataset.csv,Average_Wall_Temperature_C,float64,0,1481,,0.0,-19.689,-4.87525,5.9795,19.17425,39.728,0.0
+ladakh_shelter_1500_batch3_physics_informed_dataset.csv,Minimum_Wall_Temperature_C,float64,0,1320,,0.0,-22.01,-6.15,4.6850000000000005,18.035,37.62,0.0
+ladakh_shelter_1500_batch3_physics_informed_dataset.csv,Maximum_Wall_Temperature_C,float64,0,1304,,0.0,-16.23,-3.0575,8.024999999999999,20.7775,43.21,0.0
+ladakh_shelter_1500_batch3_physics_informed_dataset.csv,Heat_Transfer_Rate_W,float64,0,1500,,0.0,-885.7904,-209.65245,-66.9785,32.153525,782.7685,67.0
+ladakh_shelter_1500_batch3_physics_informed_dataset.csv,Average_Heat_Flux_W_m2,float64,0,1420,,0.0,-13.491,-3.6639999999999997,-1.1564999999999999,0.577,11.192,63.0
+ladakh_shelter_1500_batch3_physics_informed_dataset.csv,Maximum_Heat_Flux_W_m2,float64,0,1426,,0.0,-15.515,-4.2139999999999995,-1.33,0.66325,12.871,63.0
+ladakh_shelter_1500_batch3_physics_informed_dataset.csv,Solar_Heat_Input_W,float64,0,1500,,0.0,437.57,3583.1625,9548.150000000001,18761.25,56979.57,19.0
+ladakh_shelter_1500_batch3_physics_informed_dataset.csv,Total_Heat_Transferred_Wh,float64,0,1494,,0.0,-40519.1,-4801.3,-1368.4,630.4499999999999,22157.9,157.0
+ladakh_shelter_1500_batch3_physics_informed_dataset.csv,Indoor_Temperature_Rise_C,float64,0,1193,,0.0,-23.59,-11.34,-4.9350000000000005,2.2175000000000002,18.41,0.0
+ladakh_shelter_1500_batch3_physics_informed_dataset.csv,Thermal_Energy_Loss_Wh,float64,0,1018,,0.0,0.0,0.0,1368.4,4801.3,40519.1,121.0
+ladakh_shelter_1500_batch3_physics_informed_dataset.csv,Data_Type,str,0,1,{'PHYSICS_INFORMED_ESTIMATE': 1500},,,,,,,
+ladakh_shelter_1500_batch3_physics_informed_dataset.csv,CFD_Reference,str,0,1,"{'Calibrated against 3 ANSYS Fluent validation cases (Aluminum/Concrete/EPS, 0.20 m, Text=35C, Tinit=20C)': 1500}",,,,,,,
+ladakh_shelter_1500_batch3_physics_informed_dataset.csv,Climate_Data_Source,str,0,1,{'Representative high-altitude cold-desert climate ranges for Ladakh (not a direct NASA POWER data pull)': 1500},,,,,,,
+ladakh_shelter_1500_batch3_physics_informed_dataset.csv,Material_Data_Source,str,0,1,{'Standard engineering material-property handbook ranges': 1500},,,,,,,
+ladakh_shelter_1500_batch3_physics_informed_dataset.csv,Surrogate_Method,str,0,1,"{'Physics-informed R=L/k+R_film network, log(k)-interpolated correction anchored to 3 Fluent points': 1500}",,,,,,,
+ladakh_shelter_1500_batch3_physics_informed_dataset.csv,Batch,str,0,1,{'Batch_3': 1500},,,,,,,
+ladakh_shelter_ml_dataset_63_cases.csv,Material,str,0,3,"{'Aluminum': 21, 'Concrete': 21, 'EPS': 21}",,,,,,,
+ladakh_shelter_ml_dataset_63_cases.csv,Wall_Thickness_m,float64,0,3,,0.0,0.1,0.1,0.2,0.3,0.3,0.0
+ladakh_shelter_ml_dataset_63_cases.csv,External_Temperature_C,float64,0,7,,0.0,25.0,27.5,32.5,37.5,40.0,0.0
+ladakh_shelter_ml_dataset_63_cases.csv,Initial_Air_Temperature_C,float64,0,1,,0.0,20.0,20.0,20.0,20.0,20.0,0.0
+ladakh_shelter_ml_dataset_63_cases.csv,Solar_Radiation_kWh_m2_year,float64,0,1,,0.0,2000.0,2000.0,2000.0,2000.0,2000.0,0.0
+ladakh_shelter_ml_dataset_63_cases.csv,Wind_Speed_m_s,float64,0,1,,0.0,5.0,5.0,5.0,5.0,5.0,0.0
+ladakh_shelter_ml_dataset_63_cases.csv,Average_Air_Temperature_C,float64,0,63,,0.0,21.4902,24.2731,25.9693,28.45385,31.0263,0.0
+ladakh_shelter_ml_dataset_63_cases.csv,Minimum_Air_Temperature_C,float64,0,63,,0.0,21.2902,24.0731,25.7693,28.25385,30.8263,0.0
+ladakh_shelter_ml_dataset_63_cases.csv,Maximum_Air_Temperature_C,float64,0,63,,0.0,21.6902,24.4731,26.1693,28.65385,31.2263,0.0
+ladakh_shelter_ml_dataset_63_cases.csv,Average_Wall_Temperature_C,float64,0,63,,0.0,22.9938,27.53145,31.1588,35.007999999999996,39.9091,0.0
+ladakh_shelter_ml_dataset_63_cases.csv,Heat_Transfer_Rate_W,float64,0,63,,0.0,12.8261,73.82905,128.0922,217.37725,290.5778,0.0
+ladakh_shelter_ml_dataset_updated (1).csv,Material,str,0,3,"{'Aluminum': 12, 'Concrete': 12, 'EPS': 12}",,,,,,,
+ladakh_shelter_ml_dataset_updated (1).csv,Wall_Thickness_m,float64,0,3,,0.0,0.1,0.1,0.2,0.3,0.3,0.0
+ladakh_shelter_ml_dataset_updated (1).csv,External_Temperature_C,int64,0,4,,0.0,25.0,28.75,32.5,36.25,40.0,0.0
+ladakh_shelter_ml_dataset_updated (1).csv,Initial_Air_Temperature_C,int64,0,1,,0.0,20.0,20.0,20.0,20.0,20.0,0.0
+ladakh_shelter_ml_dataset_updated (1).csv,Solar_Radiation_kWh_m2_year,int64,0,1,,0.0,2000.0,2000.0,2000.0,2000.0,2000.0,0.0
+ladakh_shelter_ml_dataset_updated (1).csv,Wind_Speed_m_s,int64,0,1,,0.0,5.0,5.0,5.0,5.0,5.0,0.0
+ladakh_shelter_ml_dataset_updated (1).csv,Average_Air_Temperature_C,float64,0,36,,0.0,21.4902,23.078374999999998,25.79845,28.449624999999997,31.0263,0.0
+ladakh_shelter_ml_dataset_updated (1).csv,Minimum_Air_Temperature_C,float64,0,36,,0.0,21.2902,22.878375,25.59845,28.249625,30.8263,0.0
+ladakh_shelter_ml_dataset_updated (1).csv,Maximum_Air_Temperature_C,float64,0,36,,0.0,21.6902,23.278375,25.99845,28.649625,31.2263,0.0
+ladakh_shelter_ml_dataset_updated (1).csv,Average_Wall_Temperature_C,float64,0,36,,0.0,22.9938,25.708125000000003,30.0868,35.003,39.9091,0.0
+ladakh_shelter_ml_dataset_updated (1).csv,Heat_Transfer_Rate_W,float64,0,36,,0.0,12.8261,74.34077500000001,145.69275,217.377625,290.5778,0.0
+ladakh_shelter_2000_batch4_physics_informed_dataset.csv,Case_ID,str,0,2000,omitted for high-cardinality column (2000 unique values),,,,,,,
+ladakh_shelter_2000_batch4_physics_informed_dataset.csv,Material,str,0,9,"{'Brick': 240, 'Wood / timber': 240, 'Rock wool / mineral wool': 240, 'Polyurethane foam (PU)': 240, 'Composite insulated wall': 240, 'Aerated concrete / AAC': 239, 'Concrete': 188, 'EPS insulation': 187, 'Aluminum': 186}",,,,,,,
+ladakh_shelter_2000_batch4_physics_informed_dataset.csv,Material_Category,str,0,5,"{'Masonry': 667, 'Insulation': 667, 'Timber': 240, 'Composite': 240, 'Metal': 186}",,,,,,,
+ladakh_shelter_2000_batch4_physics_informed_dataset.csv,Thermal_Conductivity_W_mK,float64,0,1477,,0.0,0.02,0.0436,0.1248,0.7674500000000001,219.8112,217.0
+ladakh_shelter_2000_batch4_physics_informed_dataset.csv,Density_kg_m3,float64,0,1530,,0.0,15.2,56.0,547.75,1787.325,2700.0,0.0
+ladakh_shelter_2000_batch4_physics_informed_dataset.csv,Specific_Heat_J_kgK,float64,0,1658,,0.0,800.3,896.8,971.2,1404.225,2487.2,72.0
+ladakh_shelter_2000_batch4_physics_informed_dataset.csv,Wall_Thickness_m,float64,0,351,,0.0,0.05,0.13775,0.225,0.31225,0.4,0.0
+ladakh_shelter_2000_batch4_physics_informed_dataset.csv,Shelter_Length_m,float64,0,301,,0.0,3.0,3.75,4.5,5.25,6.0,0.0
+ladakh_shelter_2000_batch4_physics_informed_dataset.csv,Shelter_Width_m,float64,0,251,,0.0,2.5,3.1275,3.75,4.3725000000000005,5.0,0.0
+ladakh_shelter_2000_batch4_physics_informed_dataset.csv,Shelter_Height_m,float64,0,131,,0.0,2.2,2.5275,2.85,3.1725,3.5,0.0
+ladakh_shelter_2000_batch4_physics_informed_dataset.csv,Opening_Area_m2,float64,0,924,,0.0,1.67,4.557499999999999,6.83,9.12,16.61,2.0
+ladakh_shelter_2000_batch4_physics_informed_dataset.csv,Window_Area_m2,float64,0,910,,0.0,0.0,2.26,4.58,6.8825,13.98,1.0
+ladakh_shelter_2000_batch4_physics_informed_dataset.csv,Door_Area_m2,float64,0,151,,0.0,1.5,1.8775,2.25,2.6225,3.0,0.0
+ladakh_shelter_2000_batch4_physics_informed_dataset.csv,Orientation_deg,int64,0,8,,0.0,0.0,78.75,157.5,236.25,315.0,0.0
+ladakh_shelter_2000_batch4_physics_informed_dataset.csv,External_Temperature_C,float64,0,1922,,0.0,-19.98,-7.85,4.92,18.759999999999998,39.98,0.0
+ladakh_shelter_2000_batch4_physics_informed_dataset.csv,Initial_Air_Temperature_C,float64,0,1500,,0.0,5.01,10.0075,15.004999999999999,20.0025,24.99,0.0
+ladakh_shelter_2000_batch4_physics_informed_dataset.csv,Solar_Radiation_W_m2,float64,0,1988,,0.0,333.8,583.525,833.25,1083.1,1332.9,0.0
+ladakh_shelter_2000_batch4_physics_informed_dataset.csv,Daily_Solar_Energy_kWh_m2,float64,0,1952,,0.0,2.003,3.5015,5.0,6.49875,7.997,0.0
+ladakh_shelter_2000_batch4_physics_informed_dataset.csv,Wind_Speed_m_s,float64,0,1183,,0.0,0.0,3.0,6.0,9.0025,12.0,0.0
+ladakh_shelter_2000_batch4_physics_informed_dataset.csv,Relative_Humidity_percent,float64,0,701,,0.0,10.0,27.5,45.0,62.5,80.0,0.0
+ladakh_shelter_2000_batch4_physics_informed_dataset.csv,Simulation_Duration_h,float64,0,421,,0.0,6.0,16.5,27.0,37.5,48.0,0.0
+ladakh_shelter_2000_batch4_physics_informed_dataset.csv,Time_Step_min,int64,0,6,,0.0,1.0,2.0,5.0,15.0,30.0,0.0
+ladakh_shelter_2000_batch4_physics_informed_dataset.csv,Average_Air_Temperature_C,float64,0,1933,,0.0,-7.725,3.7355,9.8095,17.3355,32.892,0.0
+ladakh_shelter_2000_batch4_physics_informed_dataset.csv,Minimum_Air_Temperature_C,float64,0,1506,,0.0,-9.32,2.89,8.975000000000001,16.53,31.65,0.0
+ladakh_shelter_2000_batch4_physics_informed_dataset.csv,Maximum_Air_Temperature_C,float64,0,1507,,0.0,-5.65,4.96,11.015,18.41,34.75,0.0
+ladakh_shelter_2000_batch4_physics_informed_dataset.csv,Average_Wall_Temperature_C,float64,0,1971,,0.0,-19.515,-5.0145,6.165,18.41025,39.616,0.0
+ladakh_shelter_2000_batch4_physics_informed_dataset.csv,Minimum_Wall_Temperature_C,float64,0,1681,,0.0,-21.83,-6.205,4.835,17.017500000000002,37.76,0.0
+ladakh_shelter_2000_batch4_physics_informed_dataset.csv,Maximum_Wall_Temperature_C,float64,0,1666,,0.0,-16.26,-3.315,8.1,20.11,42.94,0.0
+ladakh_shelter_2000_batch4_physics_informed_dataset.csv,Heat_Transfer_Rate_W,float64,0,2000,,0.0,-1152.2206,-195.749125,-62.7464,30.422425,794.9907,132.0
+ladakh_shelter_2000_batch4_physics_informed_dataset.csv,Average_Heat_Flux_W_m2,float64,0,1827,,0.0,-13.817,-3.557,-1.1885,0.567,11.02,110.0
+ladakh_shelter_2000_batch4_physics_informed_dataset.csv,Maximum_Heat_Flux_W_m2,float64,0,1863,,0.0,-15.89,-4.091,-1.3665,0.65125,12.673,110.0
+ladakh_shelter_2000_batch4_physics_informed_dataset.csv,Solar_Heat_Input_W,float64,0,1998,,0.0,415.26,3532.63,9614.41,18755.37,58072.09,38.0
+ladakh_shelter_2000_batch4_physics_informed_dataset.csv,Total_Heat_Transferred_Wh,float64,0,1992,,0.0,-40001.2,-4868.775,-1443.15,677.1500000000001,23929.2,198.0
+ladakh_shelter_2000_batch4_physics_informed_dataset.csv,Indoor_Temperature_Rise_C,float64,0,1507,,0.0,-24.54,-11.2025,-5.0,2.37,18.51,0.0
+ladakh_shelter_2000_batch4_physics_informed_dataset.csv,Thermal_Energy_Loss_Wh,float64,0,1360,,0.0,0.0,0.0,1443.15,4868.775,40001.2,157.0
+ladakh_shelter_2000_batch4_physics_informed_dataset.csv,Data_Type,str,0,1,{'PHYSICS_INFORMED_ESTIMATE': 2000},,,,,,,
+ladakh_shelter_2000_batch4_physics_informed_dataset.csv,CFD_Reference,str,0,1,"{'Calibrated against 3 ANSYS Fluent validation cases (Aluminum/Concrete/EPS, 0.20 m, Text=35C, Tinit=20C)': 2000}",,,,,,,
+ladakh_shelter_2000_batch4_physics_informed_dataset.csv,Climate_Data_Source,str,0,1,{'Representative high-altitude cold-desert climate ranges for Ladakh (not a direct NASA POWER data pull)': 2000},,,,,,,
+ladakh_shelter_2000_batch4_physics_informed_dataset.csv,Material_Data_Source,str,0,1,{'Standard engineering material-property handbook ranges': 2000},,,,,,,
+ladakh_shelter_2000_batch4_physics_informed_dataset.csv,Surrogate_Method,str,0,1,"{'Physics-informed R=L/k+R_film network, log(k)-interpolated correction anchored to 3 Fluent points': 2000}",,,,,,,
+ladakh_shelter_2000_batch4_physics_informed_dataset.csv,Batch,str,0,1,{'Batch_4': 2000},,,,,,,

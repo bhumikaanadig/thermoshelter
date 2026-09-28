@@ -2,3 +2,12 @@ node_modules/
 dist/
 .env
 .env.local
+.env.*
+!.env.example
+!api/.env.example
+.firebase/
+*-firebase-adminsdk-*.json
+service-account*.json
+__pycache__/
+*.py[cod]
+.pytest_cache/

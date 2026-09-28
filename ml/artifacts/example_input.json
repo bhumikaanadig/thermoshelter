@@ -1,0 +1,23 @@
+{
+  "Material": "Composite insulated wall",
+  "Material_Category": "Composite",
+  "Thermal_Conductivity_W_mK": 0.1008,
+  "Density_kg_m3": 819.0,
+  "Specific_Heat_J_kgK": 1062.9,
+  "Wall_Thickness_m": 0.331,
+  "Shelter_Length_m": 5.37,
+  "Shelter_Width_m": 3.19,
+  "Shelter_Height_m": 2.71,
+  "Opening_Area_m2": 2.52,
+  "Window_Area_m2": 0.77,
+  "Door_Area_m2": 1.75,
+  "Orientation_deg": 90,
+  "External_Temperature_C": 9.14,
+  "Initial_Air_Temperature_C": 6.65,
+  "Solar_Radiation_W_m2": 947.1,
+  "Daily_Solar_Energy_kWh_m2": 5.682,
+  "Wind_Speed_m_s": 5.8,
+  "Relative_Humidity_percent": 14.5,
+  "Simulation_Duration_h": 18.3,
+  "Time_Step_min": 5
+}

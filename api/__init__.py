@@ -1,0 +1,1 @@
+"""THERMOSHELTER FastAPI backend package."""

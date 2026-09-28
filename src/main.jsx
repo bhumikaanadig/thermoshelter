@@ -1,18 +1,32 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Environment } from '@react-three/drei';
+import {
+  buildV3Payload,
+  buildHourlyPredictionRequest,
+  buildV3CandidatePayloads,
+  buildV3OptimizationPayloads,
+  checkApiHealth,
+  diagnoseV3Payload,
+  evaluateV3CandidatePayloads,
+  getDisplayedOutdoorTemperatureForClimate,
+  requestV3Prediction,
+  requestHourlyPrediction,
+  selectHourlyIndoorTemperature,
+  rankV3CandidatesByTarget,
+} from './api.js';
+import { FALLBACK_MATERIALS } from './materials.js';
+import {
+  buildDesignSnapshot,
+  createPersistenceClient,
+  latestHistoricalHourly,
+  latestHistoricalSummary,
+  normalizeMaterialLibrary,
+  restoreSavedDesign,
+} from './persistence.js';
+import { OPEN_METEO_ATTRIBUTION, fetchHourlyWeatherProfile } from './weather.js';
 import './styles.css';
-
-const MATERIALS = {
-  stone: { name:'Stone', k:1.70, rho:2200, cp:840, t:0.30, alpha:0.65 },
-  brick: { name:'Brick', k:0.72, rho:1800, cp:840, t:0.20, alpha:0.55 },
-  concrete: { name:'Concrete', k:1.40, rho:2300, cp:880, t:0.10, alpha:0.60 },
-  adobe: { name:'Adobe', k:0.43, rho:1600, cp:900, t:0.30, alpha:0.70 },
-  rammed: { name:'Rammed Earth', k:0.80, rho:2000, cp:900, t:0.30, alpha:0.65 },
-  timber: { name:'Timber', k:0.13, rho:550, cp:1600, t:0.10, alpha:0.55 },
-  insulation: { name:'Insulation', k:0.035, rho:40, cp:1400, t:0.05, alpha:0.20 },
-};
 
 const CLIMATE = {
   leh: { name:'Leh, Ladakh', mean:-5, amp:9, solar:850, wind:12, humidity:32, elevation:'3,500 m', season:'Winter reference' },
@@ -30,117 +44,545 @@ const BASE = {
 };
 
 function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
-function outdoorTemp(c,h){ return c.mean + c.amp * Math.sin(((h-8)/24)*Math.PI*2); }
-function solarFactor(h){ return Math.max(0,Math.sin(((h-6)/12)*Math.PI)); }
-
-function solve(s){
-  const c=CLIMATE[s.location];
-  const g=s.geometry;
-  const wallArea=2*(g.length*g.height+g.width*g.height);
-  const floorArea=g.length*g.width;
-  const envelopeArea=wallArea+floorArea;
-  const Rsi=0.13, Rso=0.04;
-  const R=Rsi+Rso+s.layers.reduce((sum,id)=>sum+MATERIALS[id].t/MATERIALS[id].k,0);
-  const U=1/R;
-  const thermalMass=s.layers.reduce((sum,id)=>sum+MATERIALS[id].t*wallArea*MATERIALS[id].rho*MATERIALS[id].cp,0)+floorArea*0.12*2300*880;
-  let tin=s.target;
-  let solar=0, heatLoss=0, comfortEnergy=0, rows=[];
-  for(let h=0;h<24;h++){
-    const out=outdoorTemp(c,h);
-    const sun=solarFactor(h);
-    const orientation=g.orientation==='S'?1.12:g.orientation==='SE'||g.orientation==='SW'?1.06:g.orientation==='E'||g.orientation==='W'?0.92:0.78;
-    const windowGain=c.solar*sun*g.windowArea*0.62*orientation;
-    const opaqueGain=c.solar*sun*floorArea*0.018*0.65;
-    const gain=windowGain+opaqueGain;
-    const envelopeLoss=U*wallArea*(tin-out);
-    const openingLoss=1.8*g.windowArea*(tin-out)+2.2*g.doorArea*(tin-out);
-    const ventilationLoss=0.33*0.45*(floorArea*g.height)*(tin-out);
-    const lossW=Math.max(0,envelopeLoss+openingLoss+ventilationLoss);
-    const occupantGain=s.occupants*100;
-    const net=gain+occupantGain-(envelopeLoss+openingLoss+ventilationLoss);
-    const dt=3600*net/Math.max(thermalMass,2.5e6);
-    tin += dt;
-    solar += Math.max(0,gain)/1000;
-    heatLoss += lossW/1000;
-    comfortEnergy += Math.abs(tin-s.target);
-    rows.push({h,out,tin,gain,loss:lossW,net});
-  }
-  const vals=rows.map(x=>x.tin);
-  const avg=vals.reduce((a,b)=>a+b,0)/vals.length;
-  const min=Math.min(...vals), max=Math.max(...vals);
-  const meanDev=vals.reduce((a,t)=>a+Math.abs(t-s.target),0)/vals.length;
-  const retention=clamp(100-meanDev*3.2,0,100);
-  const lossScore=clamp(100/(1+heatLoss/18)*1.12,0,100);
-  const solarScore=clamp(solar*2.35,0,100);
-  const comfort=clamp(100-meanDev*4.2,0,100);
-  const thermalScore=clamp(retention*0.55+lossScore*0.30+solarScore*0.15,0,100);
-  const heatingNeed=rows.reduce((sum,r)=>sum+Math.max(0,s.target-r.tin)*0.18,0);
-  return {rows,solar,heatLoss,heatingNeed,R,U,avg,min,max,comfort,retention,lossScore,solarScore,thermalScore};
-}
-
-function candidate(base,id){
-  return {...base,layers:[id,'insulation','concrete']};
-}
 
 function App(){
   const [page,setPage]=useState('overview');
+  const navRef=useRef(null);
   const [s,setS]=useState(BASE);
+  const [materials,setMaterials]=useState(FALLBACK_MATERIALS);
+  const [materialStatus,setMaterialStatus]=useState({loading:true,source:'local_fallback',warning:''});
+  const [savedDesigns,setSavedDesigns]=useState([]);
+  const [savedDesignsLoading,setSavedDesignsLoading]=useState(false);
+  const [savedDesignError,setSavedDesignError]=useState('');
+  const [savedDesignName,setSavedDesignName]=useState('Leh shelter design');
+  const [saveDesignLoading,setSaveDesignLoading]=useState(false);
+  const [savedDesignId,setSavedDesignId]=useState(null);
+  const [designHistory,setDesignHistory]=useState(null);
+  const [storageNotice,setStorageNotice]=useState('');
+  const persistence=useMemo(()=>createPersistenceClient(),[]);
   const [toast,setToast]=useState('');
-  const [simulationRunning,setSimulationRunning]=useState(false);
-  const r=useMemo(()=>solve(s),[s]);
-  const ranking=useMemo(()=>Object.keys(MATERIALS).filter(k=>k!=='insulation').map(id=>({id,r:solve(candidate(s,id))})).sort((a,b)=>b.r.thermalScore-a.r.thermalScore),[s]);
-  const best=ranking[0];
-  const update=(patch)=>setS(v=>({...v,...patch}));
-  const updateG=(patch)=>setS(v=>({...v,geometry:{...v.geometry,...patch}}));
+  const [v3Prediction,setV3Prediction]=useState(null);
+  const [v3PredictionLoading,setV3PredictionLoading]=useState(false);
+  const [v3PredictionError,setV3PredictionError]=useState('');
+  const [v3Diagnostics,setV3Diagnostics]=useState({numericOutOfRange:[],invalidNumericInputs:[],unsupportedCategories:[]});
+  const v3PredictionRunId=useRef(0);
+  const [candidateEvaluation,setCandidateEvaluation]=useState({status:'idle',rows:[],errors:[]});
+  const [optimizationEvaluation,setOptimizationEvaluation]=useState({status:'idle',rows:[],errors:[]});
+  const v3CandidateRequestCache=useRef(new Map());
+  const candidateEvaluationRunId=useRef(0);
+  const optimizationRunId=useRef(0);
+  const [apiStatus,setApiStatus]=useState({checking:true,connected:false,modelLoaded:false});
+  const [hourlyPrediction,setHourlyPrediction]=useState(null);
+  const [hourlyPredictionLoading,setHourlyPredictionLoading]=useState(false);
+  const [hourlyPredictionError,setHourlyPredictionError]=useState('');
+  const [hourlyPredictionErrorDetail,setHourlyPredictionErrorDetail]=useState('');
+  const [hourlyWeatherProfile,setHourlyWeatherProfile]=useState(null);
+  const [hourlyRequestPayload,setHourlyRequestPayload]=useState(null);
+  const hourlyRunId=useRef(0);
+  useEffect(()=>{
+    window.scrollTo(0,0);
+    if(!['overview','climate','materials','design'].includes(page)&&navRef.current){
+      navRef.current.scrollLeft=0;
+    }
+  },[page]);
+  useEffect(()=>{
+    let active=true;
+    const refreshMaterials=async()=>{
+      try{
+        const response=await persistence.getMaterials();
+        const normalized=normalizeMaterialLibrary(response);
+        const requiredIds=Object.keys(FALLBACK_MATERIALS);
+        if(requiredIds.some(id=>!normalized[id])||Object.keys(normalized).some(id=>!requiredIds.includes(id))){
+          throw new Error('The stored catalog must contain exactly the existing THERMOSHELTER materials.');
+        }
+        if(active){
+          setMaterials(normalized);
+          setMaterialStatus({loading:false,source:response.source||'firestore',warning:response.warning||''});
+        }
+      }catch(error){
+        if(active){
+          setMaterials(FALLBACK_MATERIALS);
+          setMaterialStatus({loading:false,source:'local_fallback',warning:error?.message||'Material data could not be loaded.'});
+        }
+      }
+    };
+    void refreshMaterials();
+    return ()=>{active=false;};
+  },[persistence]);
+  useEffect(()=>{
+    let active=true;
+    const refreshApiStatus=async()=>{
+      try{
+        const health=await checkApiHealth();
+        if(active){
+          setApiStatus({
+            checking:false,
+            connected:health.api_running===true,
+            modelLoaded:health.model_loaded===true,
+          });
+        }
+      }catch{
+        if(active){
+          setApiStatus({checking:false,connected:false,modelLoaded:false});
+        }
+      }
+    };
+    refreshApiStatus();
+    const interval=window.setInterval(refreshApiStatus,15000);
+    return ()=>{
+      active=false;
+      window.clearInterval(interval);
+    };
+  },[]);
+  const clearHourlyPrediction=()=>{
+    hourlyRunId.current+=1;
+    setHourlyPrediction(null);
+    setHourlyPredictionError('');
+    setHourlyPredictionErrorDetail('');
+    setHourlyWeatherProfile(null);
+    setHourlyRequestPayload(null);
+    setHourlyPredictionLoading(false);
+  };
+  const invalidateV3Prediction=()=>{
+    v3PredictionRunId.current+=1;
+    setV3Prediction(null);
+    setV3PredictionError('');
+    setV3PredictionLoading(false);
+    setV3Diagnostics({numericOutOfRange:[],invalidNumericInputs:[],unsupportedCategories:[]});
+  };
+  const clearSavedDesignContext=()=>{
+    setSavedDesignId(null);
+    setDesignHistory(null);
+    setSavedDesignError('');
+  };
+  const update=(patch)=>{
+    setS(v=>({...v,...patch}));
+    clearSavedDesignContext();
+    setStorageNotice('');
+    clearHourlyPrediction();
+    invalidateV3Prediction();
+    resetCandidateEvaluation();
+  };
+  const updateG=(patch)=>{
+    setS(v=>({...v,geometry:{...v.geometry,...patch}}));
+    clearSavedDesignContext();
+    setStorageNotice('');
+    clearHourlyPrediction();
+    invalidateV3Prediction();
+    resetCandidateEvaluation();
+  };
   const notify=(msg)=>{setToast(msg);setTimeout(()=>setToast(''),2400)};
-  const runSimulation = () => 
-    {
-  setSimulationRunning(true);
-  notify('Thermal analysis is running...');
-
-  setTimeout(() => {
-    setSimulationRunning(false);
-    notify('Thermal analysis completed for current design.');
+  const resetCandidateEvaluation=()=>{
+    candidateEvaluationRunId.current+=1;
+    optimizationRunId.current+=1;
+    v3CandidateRequestCache.current.clear();
+    setCandidateEvaluation({status:'idle',rows:[],errors:[]});
+    setOptimizationEvaluation({status:'idle',rows:[],errors:[]});
+  };
+  const persistenceSnapshot=(design,weatherProfile=null)=>buildDesignSnapshot(
+    design,
+    CLIMATE[design.location]||{},
+    materials,
+    weatherProfile,
+  );
+  const refreshSavedDesignList=async()=>{
+    setSavedDesignsLoading(true);
+    setSavedDesignError('');
+    try{
+      const response=await persistence.listDesigns();
+      setSavedDesigns(Array.isArray(response?.designs)?response.designs:[]);
+    }catch(error){
+      setSavedDesigns([]);
+      setSavedDesignError(error?.message||'Saved designs could not be loaded.');
+    }finally{
+      setSavedDesignsLoading(false);
+    }
+  };
+  const openDesignWorkspace=()=>{
+    setPage('design');
+    void refreshSavedDesignList();
+  };
+  const saveCurrentDesign=async()=>{
+    setSaveDesignLoading(true);
+    setStorageNotice('');
+    try{
+      const snapshot=persistenceSnapshot(s);
+      const response=await persistence.saveDesign({
+        name:savedDesignName.trim()||'Untitled shelter',
+        design:snapshot.design,
+        climate:snapshot.climate,
+        materials:snapshot.materials,
+        ...(savedDesignId?{design_id:savedDesignId}:{}),
+      });
+      const saved=response?.design;
+      if(!saved?.id) throw new Error('The backend did not return the saved design identifier.');
+      setSavedDesignId(saved.id);
+      setSavedDesignName(saved.name||'Untitled shelter');
+      setDesignHistory(null);
+      setStorageNotice('Design saved. Run an analysis to save results for this design.');
+      await refreshSavedDesignList();
+      notify('Shelter design saved.');
+    }catch(error){
+      setStorageNotice(`Design was not saved: ${error?.message||'Firestore is unavailable.'}`);
+    }finally{
+      setSaveDesignLoading(false);
+    }
+  };
+  const loadSavedDesign=async(designId)=>{
+    if(!designId) return;
+    setSavedDesignsLoading(true);
+    setSavedDesignError('');
+    try{
+      const response=await persistence.loadDesign(designId);
+      const restored=restoreSavedDesign(response?.design,materials,Object.keys(CLIMATE));
+      let history=null;
+      let historyWarning='';
+      try{
+        history=await persistence.getDesignHistory(designId);
+      }catch(error){
+        historyWarning=` The design loaded, but its saved result history could not be read: ${error?.message||'request failed'}`;
+      }
+      setS(restored.design);
+      setSavedDesignId(restored.designId);
+      setSavedDesignName(response.design.name||'Untitled shelter');
+      setDesignHistory(history?{...history,design_id:designId}:null);
+      clearHourlyPrediction();
+      invalidateV3Prediction();
+      resetCandidateEvaluation();
+      setStorageNotice(`Loaded saved design. Historical results are labeled separately; run analysis for a current result.${historyWarning}`);
+      setPage('design');
+      notify('Saved design loaded. Run a new analysis for current results.');
+    }catch(error){
+      setSavedDesignError(error?.message||'The saved design is missing or invalid.');
+    }finally{
+      setSavedDesignsLoading(false);
+    }
+  };
+  const persistPrediction=async({design,designId,modelVersion,kind,result,diagnostics,weatherProfile=null})=>{
+    const snapshot=persistenceSnapshot(design,weatherProfile);
+    try{
+      const response=await persistence.savePrediction({
+        ...snapshot,
+        ...(designId?{design_id:designId}:{}),
+        model_version:modelVersion,
+        prediction_kind:kind,
+        result,
+        diagnostics,
+      });
+      if(!response?.prediction?.id) throw new Error('The saved prediction identifier was not returned.');
+      setStorageNotice(designId
+        ? `${kind==='hourly'?'Hourly':'V3 summary'} prediction saved to this design's history.`
+        : `${kind==='hourly'?'Hourly':'V3 summary'} prediction saved with a reproducible scenario snapshot.`);
+    }catch(error){
+      setStorageNotice(`Prediction completed but was not saved: ${error?.message||'Firestore is unavailable.'}`);
+    }
+  };
+  const persistOptimization=async({design,designId,rows})=>{
+    const snapshot=persistenceSnapshot(design);
+    const ranked=rankV3CandidatesByTarget(rows,design.target);
+    const selected=ranked[0]||null;
+    const candidates=rows.map((row)=>({
+      label:row.label,
+      configuration:row.configuration,
+      prediction:row.prediction,
+      diagnostics:row.diagnostics,
+      error:row.error||null,
+      targetDeviationC:row.prediction
+        ? Math.abs(row.prediction.predictions.Average_Air_Temperature_C-design.target)
+        : null,
+    }));
+    try{
+      const response=await persistence.saveOptimizationRun({
+        design:snapshot.design,
+        climate:snapshot.climate,
+        materials:snapshot.materials,
+        ...(designId?{design_id:designId}:{}),
+        search_scope:{
+          method:'balanced V3 design-space screen',
+          varied_parameters:['primary_material','wall_thickness','length','width','height','orientation','window_area','door_area'],
+          fixed_location:design.location,
+          fixed_target_temperature_C:design.target,
+          successful_candidate_count:rows.filter((row)=>row.prediction).length,
+        },
+        candidate_count:candidates.length,
+        candidates,
+        selected_candidate:selected?{
+          label:selected.label,
+          configuration:selected.configuration,
+          prediction:selected.prediction,
+          target_deviation_C:selected.targetDeviationC,
+        }:null,
+        metric:'Absolute target gap: |V3 Average_Air_Temperature_C − target temperature|, in °C',
+      });
+      if(!response?.optimization_run?.id) throw new Error('The saved optimization identifier was not returned.');
+      setStorageNotice(designId
+        ? 'V3 design-space search saved to this design history.'
+        : 'V3 design-space search saved with a reproducible scenario snapshot.');
+    }catch(error){
+      setStorageNotice(`Optimization completed but was not saved: ${error?.message||'Firestore is unavailable.'}`);
+    }
+  };
+  const runCandidateEvaluation=async()=>{
+    if(candidateEvaluation.status==='loading') return;
+    const operationId=++candidateEvaluationRunId.current;
+    setCandidateEvaluation({status:'loading',rows:[],errors:[]});
+    try{
+      const candidates=buildV3CandidatePayloads(s,materials,CLIMATE);
+      const rows=await evaluateV3CandidatePayloads(candidates,v3CandidateRequestCache.current);
+      if(operationId!==candidateEvaluationRunId.current) return;
+      const failures=rows.filter(row=>row.error).map(row=>({candidate:row.label,message:row.error}));
+      const successfulCount=rows.filter(row=>row.prediction).length;
+      setCandidateEvaluation({
+        status:failures.length?(successfulCount?'partial':'error'):'success',
+        rows,
+        errors:failures,
+      });
+      if(successfulCount>0) setApiStatus({checking:false,connected:true,modelLoaded:true});
+      else if(failures.some(({message})=>message.includes('connect to THERMOSHELTER API'))){
+        setApiStatus({checking:false,connected:false,modelLoaded:false});
+      }
+    }catch(error){
+      if(operationId!==candidateEvaluationRunId.current) return;
+      setCandidateEvaluation({
+        status:'error',
+        rows:[],
+        errors:[{candidate:'Candidate set',message:error?.message||'Unable to evaluate candidates.'}],
+      });
+    }
+  };
+  const runOptimizationSearch=async()=>{
+    if(optimizationEvaluation.status==='loading') return;
+    const operationId=++optimizationRunId.current;
+    setOptimizationEvaluation({status:'loading',rows:[],errors:[]});
+    try{
+      const designAtStart={...s,geometry:{...s.geometry},layers:[...s.layers]};
+      const designIdAtStart=savedDesignId;
+      const candidates=buildV3OptimizationPayloads(designAtStart,materials,CLIMATE);
+      const rows=await evaluateV3CandidatePayloads(candidates,v3CandidateRequestCache.current);
+      if(operationId!==optimizationRunId.current) return;
+      const failures=rows.filter(row=>row.error).map(row=>({candidate:row.label,message:row.error}));
+      const successfulCount=rows.filter(row=>row.prediction).length;
+      setOptimizationEvaluation({
+        status:failures.length?(successfulCount?'partial':'error'):'success',
+        rows,
+        errors:failures,
+      });
+      if(successfulCount>0){
+        void persistOptimization({design:designAtStart,designId:designIdAtStart,rows});
+      }
+      if(successfulCount>0) setApiStatus({checking:false,connected:true,modelLoaded:true});
+      else if(failures.some(({message})=>message.includes('connect to THERMOSHELTER API'))){
+        setApiStatus({checking:false,connected:false,modelLoaded:false});
+      }
+    }catch(error){
+      if(operationId!==optimizationRunId.current) return;
+      setOptimizationEvaluation({
+        status:'error',
+        rows:[],
+        errors:[{candidate:'Optimization search',message:error?.message||'Unable to build the V3 search.'}],
+      });
+    }
+  };
+  const applyCandidate=(materialId)=>{
+    const selectedMaterialId=typeof materialId==='string'?materialId:materialId?.id;
+    if(!selectedMaterialId) return;
+    update({layers:[selectedMaterialId,'insulation','concrete']});
+    openDesignWorkspace();
+  };
+  const applyOptimizationCandidate=(candidate)=>{
+    if(!candidate?.configuration) return;
+    update({
+      layers:[...candidate.configuration.layers],
+      layerThicknesses:[...candidate.configuration.layerThicknesses],
+      geometry:{...candidate.configuration.geometry},
+    });
+    openDesignWorkspace();
+  };
+  const runV3Prediction=async()=>{
+    const operationId=++v3PredictionRunId.current;
+    const designAtStart={...s,geometry:{...s.geometry},layers:[...s.layers]};
+    const designIdAtStart=savedDesignId;
+    setV3PredictionLoading(true);
+    setV3PredictionError('');
+    setV3Prediction(null);
+    setV3Diagnostics({numericOutOfRange:[],invalidNumericInputs:[],unsupportedCategories:[]});
+    try{
+      const payload=buildV3Payload(
+        designAtStart,
+        materials,
+        CLIMATE,
+        getDisplayedOutdoorTemperatureForClimate(CLIMATE[designAtStart.location]),
+      );
+      const diagnostics=diagnoseV3Payload(payload);
+      setV3Diagnostics(diagnostics);
+      if(diagnostics.invalidNumericInputs.length||diagnostics.unsupportedCategories.length){
+        setV3PredictionError(diagnostics.unsupportedCategories.length
+          ? 'The selected material/category is not supported by the summary model. Choose a supported option and try again.'
+          : 'One or more numeric inputs are not finite numbers. Check the design values and try again.');
+        return;
+      }
+      const result=await requestV3Prediction(payload);
+      if(operationId!==v3PredictionRunId.current) return;
+      setV3Prediction(result);
+      setApiStatus({checking:false,connected:true,modelLoaded:true});
+      void persistPrediction({
+        design:designAtStart,
+        designId:designIdAtStart,
+        modelVersion:'V3',
+        kind:'summary',
+        result,
+        diagnostics,
+      });
+    }catch(error){
+      if(operationId!==v3PredictionRunId.current) return;
+      setV3PredictionError(message);
+      if(message==='VITE_API_BASE_URL is not configured.'){
+        setApiStatus({checking:false,connected:false,modelLoaded:false});
+      }
+    }finally{
+      if(operationId===v3PredictionRunId.current) setV3PredictionLoading(false);
+    }
+  };
+  const runHourlyPrediction=async(design=s)=>{
+    const designAtStart={...design,geometry:{...design.geometry},layers:[...design.layers]};
+    const designIdAtStart=design===s?savedDesignId:null;
+    const operationId=++hourlyRunId.current;
+    setHourlyPredictionLoading(true);
+    setHourlyPrediction(null);
+    setHourlyPredictionError('');
+    setHourlyPredictionErrorDetail('');
+    setHourlyWeatherProfile(null);
+    setHourlyRequestPayload(null);
+    try{
+      const weather=await fetchHourlyWeatherProfile(designAtStart.location);
+      if(operationId!==hourlyRunId.current) return;
+      setHourlyWeatherProfile(weather);
+      const payload=buildHourlyPredictionRequest(designAtStart,materials,CLIMATE,weather);
+      const diagnostics=diagnoseV3Payload(payload.case_inputs);
+      if(diagnostics.invalidNumericInputs.length||diagnostics.unsupportedCategories.length){
+        throw new Error(diagnostics.unsupportedCategories.length
+          ? 'The selected material/category is not supported by the hourly model.'
+          : 'A case input is missing or non-finite. Check the design values and try again.');
+      }
+      setHourlyRequestPayload(payload);
+      const result=await requestHourlyPrediction(payload);
+      if(operationId!==hourlyRunId.current) return;
+      if(!Array.isArray(result?.hours)||result.hours.length!==24
+        ||result.hours.some((value,index)=>value!==index)
+        ||!Array.isArray(result?.predicted_indoor_temperature_C)
+        ||result.predicted_indoor_temperature_C.length!==24
+        ||result.predicted_indoor_temperature_C.some(value=>typeof value!=='number'||!Number.isFinite(value))){
+        throw new Error('The hourly API response did not contain 24 finite temperatures for hours 0–23.');
+      }
+      setHourlyPrediction(result);
+      setApiStatus({checking:false,connected:true,modelLoaded:true});
+      void persistPrediction({
+        design:designAtStart,
+        designId:designIdAtStart,
+        modelVersion:'V3-Hourly-v1',
+        kind:'hourly',
+        result,
+        diagnostics:result.diagnostics||{},
+        weatherProfile:weather,
+      });
+    }catch(error){
+      if(operationId!==hourlyRunId.current) return;
+      setHourlyPredictionError('Unable to generate the 24-hour indoor-temperature prediction.');
+      setHourlyPredictionErrorDetail(error?.message||'Weather or hourly model request failed.');
+      setHourlyPrediction(null);
+    }finally{
+      if(operationId===hourlyRunId.current){
+        setHourlyPredictionLoading(false);
+      }
+    }
+  };
+  const openHourlySimulation=(design=s)=>{
+    const selectedDesign=design?.geometry&&Array.isArray(design.layers)?design:s;
     setPage('simulate');
-  }, 500);
-};
-  const loadLadakh=()=>{setS(BASE);setPage('design');notify('Leh reference configuration loaded.');};
-  const launchDemo=()=>{setS(BASE);setPage('simulate');notify('Ladakh transient simulation completed.');};
-
+    void runHourlyPrediction(selectedDesign);
+  };
   const nav = [
-  ['overview', 'Overview'],
-  ['climate', 'Climate'],
-  ['materials', 'Materials'],
-  ['compare', 'Compare'],
-  ['optimize', 'Optimize'],
-  ['ansys', 'Engineering Simulation'],
-  ['report', 'Report']
-];
+    ['overview', 'Overview'],
+    ['climate', 'Climate'],
+    ['materials', 'Materials'],
+    ['design', 'Design a Shelter'],
+  ];
   return <div className="app">
-    <header className="topbar"><button className="brand" onClick={()=>setPage('overview')}>THERMO<span>SHELTER</span><small>ANSYS-VALIDATED THERMAL WORKFLOW</small></button>
-      <nav>{nav.map(([id,label])=><button key={id} className={page===id?'active':''} onClick={()=>setPage(id)}>{label}</button>)}</nav>
-      <button className="start" onClick={()=>setPage('design')}>Start design</button>
+    <header className="topbar"><button className="brand" onClick={()=>setPage('overview')}>THERMO<span>SHELTER</span><small>CLIMATE-RESPONSIVE SHELTER DESIGN</small></button>
+      {page!=='overview'&&<nav ref={navRef} aria-label="Main navigation">{nav.map(([id,label])=>{
+        const active=page===id||(id==='design'&&page==='design');
+        return <button key={id} className={active?'active':''} aria-current={active?'page':undefined} onClick={()=>id==='design'?openDesignWorkspace():setPage(id)}>{label}</button>;
+      })}</nav>}
     </header>
     {toast&&<div className="toast">✓ {toast}</div>}
-    {page==='overview'&&<Overview onDesign={()=>setPage('design')} onExplore={loadLadakh} onLaunch={launchDemo} r={r} best={best}/>} 
+    {storageNotice&&<div className="persistence-notice" role="status" aria-live="polite">{storageNotice}</div>}
+    {page==='overview'&&<Overview onDesign={openDesignWorkspace} onClimate={()=>setPage('climate')} onMaterials={()=>setPage('materials')}/>}
     {page==='design'&&
   <Design
     s={s}
-    r={r}
+    materials={materials}
+    materialStatus={materialStatus}
     update={update}
     updateG={updateG}
-    onRun={runSimulation}
-    simulationRunning={simulationRunning}
+    onRun={runV3Prediction}
+    onOpenHourlySimulation={openHourlySimulation}
+    predictionLoading={v3PredictionLoading}
+    prediction={v3Prediction}
+    predictionError={v3PredictionError}
+    diagnostics={v3Diagnostics}
+    apiStatus={apiStatus}
+    savedDesigns={savedDesigns}
+    savedDesignsLoading={savedDesignsLoading}
+    savedDesignError={savedDesignError}
+    savedDesignName={savedDesignName}
+    onSavedDesignNameChange={setSavedDesignName}
+    onSaveDesign={saveCurrentDesign}
+    onLoadSavedDesign={loadSavedDesign}
+    onRefreshSavedDesigns={refreshSavedDesignList}
+    saveDesignLoading={saveDesignLoading}
+    savedDesignId={savedDesignId}
+    onBackToOverview={()=>setPage('overview')}
+    onContinueToCompare={()=>setPage('compare')}
   />
 }
-    {page==='climate'&&<ClimatePage/>}
-    {page==='materials'&&<MaterialsPage/>}
-    {page==='simulate'&&<Simulation s={s} r={r} onRun={runSimulation}/>} 
-    {page==='compare'&&<Compare ranking={ranking} s={s}/>} 
-    {page==='optimize'&&<Optimize ranking={ranking} best={best} setPage={setPage}/>} 
-    {page==='ansys'&&<Ansys r={r}/>} 
-    {page==='report'&&<Report s={s} r={r} best={best}/>} 
-    <footer>THERMOSHELTER · Prototype thermal decision-support software · TEAM BYTE ME.</footer>
+    {page==='climate'&&<ClimatePage onBack={()=>setPage('overview')}/>}
+    {page==='materials'&&<MaterialsPage materials={materials} materialStatus={materialStatus} onBack={()=>setPage('overview')}/>}
+    {page==='simulate'&&<Simulation
+      s={s}
+      materials={materials}
+      prediction={hourlyPrediction}
+      loading={hourlyPredictionLoading}
+      error={hourlyPredictionError}
+      errorDetail={hourlyPredictionErrorDetail}
+      weatherProfile={hourlyWeatherProfile}
+      requestPayload={hourlyRequestPayload}
+      onRun={()=>runHourlyPrediction(s)}
+      onGoDesign={openDesignWorkspace}
+      onBackToOptimize={()=>setPage('optimize')}
+      onContinueToReport={()=>setPage('report')}
+    />}
+    {page==='compare'&&<Compare
+      s={s}
+      evaluation={candidateEvaluation}
+      onEvaluate={runCandidateEvaluation}
+      onApplyCandidate={applyCandidate}
+      onBackToDesign={()=>setPage('design')}
+      onContinue={()=>setPage('optimize')}
+    />}
+    {page==='optimize'&&<Optimize
+      s={s}
+      evaluation={optimizationEvaluation}
+      onEvaluate={runOptimizationSearch}
+      onApplyCandidate={applyOptimizationCandidate}
+      onOpenHourlySimulation={openHourlySimulation}
+      setPage={setPage}
+      onBackToCompare={()=>setPage('compare')}
+      onContinueToSimulation={()=>setPage('simulate')}
+    />}
+    {page==='report'&&(
+      <Report s={s} materials={materials} prediction={v3Prediction} predictionError={v3PredictionError} diagnostics={v3Diagnostics} candidateEvaluation={optimizationEvaluation.status==='idle'?candidateEvaluation:optimizationEvaluation} designHistory={savedDesignId?designHistory:null} onGoDesign={openDesignWorkspace} onBackToSimulation={()=>setPage('simulate')}/>
+    )}
+    <footer>THERMOSHELTER · CLIMATE-RESPONSIVE DESIGN DECISION SUPPORT . CREATED BY TEAM BYTE MEX </footer>
   </div>
 }
 
@@ -249,303 +691,119 @@ function Shelter3D() {
   );
 }
 
-function Overview({ onDesign, onExplore, onLaunch, r, best }) {
+function PageBackLink({label,onClick}) {
+  return <button className="view-back-link" type="button" onClick={onClick}>← {label}</button>;
+}
+
+function WorkflowActions({backLabel,onBack,nextLabel,onNext}) {
+  return <div className="workflow-actions">
+    {backLabel&&onBack&&<button className="ghost" type="button" onClick={onBack}>← {backLabel}</button>}
+    {nextLabel&&onNext&&<button className="primary" type="button" onClick={onNext}>{nextLabel} →</button>}
+  </div>;
+}
+
+function Overview({onDesign,onClimate,onMaterials}) {
   return (
-    <main className="section overview-page">
-
-      {/* HERO */}
-      <section className="overview-hero">
-
-        <div className="hero-copy">
-
-          <div className="eyebrow">
-            AREA-SPECIFIC THERMAL DESIGN
+    <main className="section overview-page redesigned-overview">
+      <section className="studio-hero">
+        <div className="studio-hero-copy">
+          <div className="eyebrow">AREA-SPECIFIC THERMAL DESIGN</div>
+          <h1>Design a HOME not just a shelter.</h1>
+          <p className="lede">Set the local reference conditions, shape, openings and material layers. Review case-level thermal estimates and forecast-driven indoor temperatures with their scope and units.</p>
+          <div className="studio-hero-actions">
+            <button className="primary" type="button" onClick={onDesign}>Design a Shelter <span aria-hidden="true">→</span></button>
+            <button className="text-action" type="button" onClick={onClimate}>Explore climate profiles</button>
+            <button className="text-action" type="button" onClick={onMaterials}>Browse materials</button>
           </div>
-
-          <h1>
-            Design the
-            <br />
-            shelter.
-            <br />
-            <span>Not just the simulation.</span>
-          </h1>
-
-          <p className="hero-description">
-            THERMOSHELTER combines climate, geometry and material properties
-            into a transparent thermal-analysis workflow for passive shelter design.
-          </p>
-
-          <div className="hero-actions">
-
-            <button
-              className="primary-button"
-              onClick={onDesign}
-            >
-              Design a shelter →
-            </button>
-
-            <button
-              className="secondary-button"
-              onClick={onExplore}
-            >
-              Explore Leh demo ↗
-            </button>
-
-            <button
-              className="secondary-button"
-              onClick={onLaunch}
-            >
-              Run Leh simulation
-            </button>
-
+          <div className="studio-facts" aria-label="Model output scope">
+            <div><strong>21</strong><span>shelter and climate inputs</span></div>
+            <div><strong>6</strong><span>case-level summary outputs</span></div>
+            <div><strong>24</strong><span>hourly indoor temperatures</span></div>
           </div>
-
-          <div className="hero-tags">
-            <span>ANSYS-READY WORKFLOW</span>
-            <span>TRANSIENT THERMAL ANALYSIS</span>
-            <span>EXPLAINABLE OPTIMIZATION</span>
-          </div>
-
         </div>
-
-
-        {/* 3D HERO */}
-        <div className="hero-visual">
-
+        <div className="studio-geometry-card">
+          <div className="studio-geometry-heading"><span>GEOMETRY PREVIEW</span><span></span></div>
           <Shelter3D />
-
-          <div className="zoom-hint">
-  <span>↕</span>
-  Scroll to zoom · Drag to rotate
-</div>
-<div className="hero-visual-metrics">
-
-            <div>
-              <span>OUTDOOR</span>
-              <strong>
-                {r.rows?.[0]?.out?.toFixed(1) || "-5.0"}°C
-              </strong>
-            </div>
-
-            <div>
-              <span>INDOOR</span>
-              <strong>
-                {r.avg?.toFixed(1) || "17.7"}°C
-              </strong>
-            </div>
-
-            <div>
-              <span>THERMAL SCORE</span>
-              <strong>
-                {r.thermalScore?.toFixed(1) || "72.7"}
-              </strong>
-            </div>
-
-          </div>
-
+          <div className="studio-geometry-caption"><strong>Shelter form</strong><span>Shape and dimensions only · no thermal field</span></div>
         </div>
-
       </section>
-
-
-      {/* METRIC RIBBON */}
-      <section className="metric-ribbon">
-
-        <div className="metric-item">
-          <span>LOCATION</span>
-          <strong>LEH · LADAKH</strong>
-          <small>High-altitude winter reference</small>
-        </div>
-
-        <div className="metric-item">
-          <span>PREDICTED INDOOR</span>
-          <strong>{r.avg?.toFixed(1) || "17.7"}°C</strong>
-          <small>24-hour mean temperature</small>
-        </div>
-
-        <div className="metric-item">
-          <span>SOLAR THERMAL GAIN</span>
-          <strong>{r.solar?.toFixed(1) || "0.0"} kWh</strong>
-          <small>24-hour thermal gain</small>
-        </div>
-
-        <div className="metric-item">
-          <span>THERMAL SCORE</span>
-          <strong>{r.thermalScore?.toFixed(1) || "72.7"}/100</strong>
-          <small>Prototype performance indicator · not an ANSYS validation score</small>
-        </div>
-
+      <section className="studio-reference-strip">
+        <div><span>REFERENCE CONDITIONS</span><strong>Six regional climate profiles</strong><p>Fixed case-summary inputs. The hourly workflow requests forecast data when run.</p></div>
+        <div className="studio-reference-note"><span>RESULT SCOPE</span><strong>Case-level rates and modeled-duration energy</strong><p>The hourly model returns indoor temperatures; it does not produce hourly heat-flow values.</p></div>
       </section>
-
-
-      {/* WORKFLOW */}
-      <section className="overview-workflow">
-
-        <div className="section-intro">
-
-          <div className="eyebrow">
-            HOW THERMOSHELTER WORKS
-          </div>
-
-          <h2>
-            From environmental
-            <br />
-            conditions to a design decision.
-          </h2>
-
-          <p>
-            The platform connects climate data, shelter geometry,
-            material properties and thermal simulation into one workflow.
-          </p>
-
-        </div>
-
-
-        <div className="workflow-grid">
-
-          <div className="workflow-card">
-            <span className="workflow-number">01</span>
-
-            <h3>Define the environment.</h3>
-
-            <p>
-              Select an area and establish the atmospheric conditions,
-              solar input and design temperature.
-            </p>
-          </div>
-
-
-          <div className="workflow-card">
-            <span className="workflow-number">02</span>
-
-            <h3>Build the shelter.</h3>
-
-            <p>
-              Configure dimensions, orientation, openings,
-              thermal mass and envelope materials.
-            </p>
-          </div>
-
-
-          <div className="workflow-card">
-            <span className="workflow-number">03</span>
-
-            <h3>Run thermal analysis.</h3>
-
-            <p>
-              Evaluate temperature response, solar gains,
-              heat loss and thermal behaviour over time.
-            </p>
-          </div>
-
-
-          <div className="workflow-card">
-            <span className="workflow-number">04</span>
-
-            <h3>Select the optimal configuration.</h3>
-
-            <p>
-              Compare configurations and identify the combination
-              with the strongest thermal performance.
-            </p>
-          </div>
-
-        </div>
-
-      </section>
-
-      {/* DESIGN INTELLIGENCE */}
-      <section className="overview-intelligence">
-
-        <div className="section-intro">
-
-          <div className="eyebrow">
-            DESIGN INTELLIGENCE
-          </div>
-
-          <h2>
-            More than a temperature.
-          </h2>
-
-          <p>
-            A useful thermal model should explain why a design performs
-            the way it does — not simply produce a number.
-          </p>
-
-        </div>
-
-
-        <div className="intelligence-grid">
-
-          <div className="intelligence-card">
-            <span>THERMAL RESPONSE</span>
-
-            <strong>
-              {r.min?.toFixed(1) || "-5.0"}°C →{" "}
-              {r.max?.toFixed(1) || "18.0"}°C
-            </strong>
-
-            <p>
-              Predicted indoor temperature range over 24 hours.
-            </p>
-          </div>
-
-
-          <div className="intelligence-card">
-            <span>ENVELOPE PERFORMANCE</span>
-
-            <strong>
-              {r.U?.toFixed(3) || "0.000"} W/m²·K
-            </strong>
-
-            <p>
-              Lower U-value indicates lower heat transfer through the envelope.
-            </p>
-          </div>
-
-
-          <div className="intelligence-card">
-            <span>RECOMMENDED MATERIAL</span>
-
-            <strong>
-              {best ? MATERIALS[best.id].name : "Insulated envelope"}
-            </strong>
-
-            <p>
-              Highest-ranked candidate within the evaluated set.
-            </p>
-          </div>
-
-        </div>
-
-      </section>
-
-
     </main>
   );
 }
-
-function Design({s,r,update,updateG,onRun,simulationRunning}) {
+function Design({s,materials,materialStatus,update,updateG,onRun,onOpenHourlySimulation,predictionLoading,prediction,predictionError,diagnostics,apiStatus,savedDesigns,savedDesignsLoading,savedDesignError,savedDesignName,onSavedDesignNameChange,onSaveDesign,onLoadSavedDesign,onRefreshSavedDesigns,saveDesignLoading,savedDesignId,onBackToOverview,onContinueToCompare}) {
   return (
     <main className="section">
 
-      <div className="eyebrow">01 · DESIGN WORKSPACE</div>
+      <PageBackLink label="Back to Overview" onClick={onBackToOverview}/>
+      <div className="eyebrow">DESIGN WORKSPACE</div>
 
       <div className="design-heading">
         <div>
           <h1>Describe your shelter.</h1>
 
           <p className="lede">
-            Configure the shelter and run a thermal analysis to visualize
-            how the design responds to its selected climate and materials.
+            Configure the shelter and request case-level thermal estimates. The 3D view
+            below shows geometry only; use the separate hourly model for a
+            forecast-driven indoor-temperature curve.
           </p>
         </div>
 
-        <div className={`live-model-status ${simulationRunning ? 'running' : ''}`}>
-          <span></span>
-          {simulationRunning ? 'SIMULATION RUNNING' : 'MODEL READY'}
+        <div className="design-header-status">
+          <div className={`live-model-status ${predictionLoading ? 'running' : ''}`}>
+            <span></span>
+            {predictionLoading ? 'PREDICTION RUNNING' : 'DESIGN INPUTS READY'}
+          </div>
+          <div
+            className={`v3-api-status ${apiStatus.connected && apiStatus.modelLoaded ? 'connected' : 'disconnected'}`}
+            role="status"
+            aria-live="polite"
+          >
+            <span className="v3-api-status-dot" />
+            {apiStatus.checking
+              ? 'Checking THERMOSHELTER API…'
+              : apiStatus.connected && apiStatus.modelLoaded
+                ? <><span>API Connected</span><span>Summary Model Ready</span></>
+                : 'API Disconnected'}
+          </div>
         </div>
       </div>
+
+      <section className="panel saved-design-panel" aria-labelledby="saved-design-heading">
+        <div className="saved-design-copy">
+          <div className="eyebrow">PROJECT PERSISTENCE</div>
+          <h2 id="saved-design-heading">Save or load a design.</h2>
+          <p>Saved inputs restore geometry, openings, orientation, climate and material layers. Predictions are stored separately as historical results.</p>
+        </div>
+        <div className="saved-design-actions">
+          <label>
+            Design name
+            <input value={savedDesignName} maxLength={120} onChange={event=>onSavedDesignNameChange(event.target.value)} />
+          </label>
+          <button className="primary" onClick={onSaveDesign} disabled={saveDesignLoading}>
+            {saveDesignLoading?'Saving design…':'Save Design'}
+          </button>
+          <label>
+            Saved designs
+            <select value="" onChange={event=>onLoadSavedDesign(event.target.value)} disabled={savedDesignsLoading||savedDesigns.length===0}>
+              <option value="">{savedDesignsLoading?'Loading saved designs…':savedDesigns.length?'Choose a saved design':'No saved designs available'}</option>
+              {savedDesigns.map(design=><option key={design.id} value={design.id}>{design.name||'Untitled shelter'}</option>)}
+            </select>
+          </label>
+          <button className="ghost" onClick={onRefreshSavedDesigns} disabled={savedDesignsLoading}>
+            {savedDesignsLoading?'Refreshing…':'Refresh list'}
+          </button>
+        </div>
+        <div className="saved-design-status" role="status" aria-live="polite">
+          {savedDesignId&&<span>Current design is linked to a saved record.</span>}
+          {materialStatus.loading&&<span>Loading the material catalog…</span>}
+          {!materialStatus.loading&&materialStatus.warning&&<span>Material catalog: {materialStatus.warning}</span>}
+          {savedDesignError&&<span className="persistence-error">Saved designs: {savedDesignError}</span>}
+        </div>
+      </section>
 
       <div className="design-grid">
 
@@ -628,6 +886,10 @@ function Design({s,r,update,updateG,onRun,simulationRunning}) {
             />
           </label>
 
+          <p className="form-field-note">
+            The summary model currently uses this target as its initial-air-temperature input; it has no separate initial-temperature control.
+          </p>
+
           <label>
             Primary material
             <select
@@ -638,73 +900,133 @@ function Design({s,r,update,updateG,onRun,simulationRunning}) {
                     e.target.value,
                     'insulation',
                     'concrete'
-                  ]
+                  ],
+                  layerThicknesses:null,
                 })
               }
             >
-              {Object.keys(MATERIALS)
+              {Object.keys(materials)
                 .filter(k=>k!=='insulation')
                 .map(k=>(
                   <option key={k} value={k}>
-                    {MATERIALS[k].name}
+                    {materials[k].name}
                   </option>
                 ))}
             </select>
           </label>
 
           <div className="live-input-note">
-            <span></span>
-            Design parameters drive the thermal model
+            The summary model combines the selected primary material with the fixed insulation and concrete layers into effective composite inputs.
           </div>
+          <p className="form-field-note">
+            Occupant count is saved with the design but is not one of the current summary or hourly model inputs.
+          </p>
 
           <button
             className="primary wide"
             onClick={onRun}
+            disabled={predictionLoading}
           >
-            {simulationRunning
-              ? 'Running thermal analysis…'
-              : 'Run thermal analysis →'}
+            {predictionLoading
+              ? 'Requesting case estimate...'
+              : 'Predict thermal performance →'}
           </button>
 
         </div>
 
         <Design3DSimulation
           s={s}
-          r={r}
-          simulationRunning={simulationRunning}
+          materials={materials}
         />
 
       </div>
+
+      <V3PredictionResults
+        prediction={prediction}
+        error={predictionError}
+        diagnostics={diagnostics}
+        onOpenHourlySimulation={onOpenHourlySimulation}
+      />
+      <WorkflowActions nextLabel="Continue to Compare" onNext={onContinueToCompare}/>
 
     </main>
   );
 }
 
-function Design3DSimulation({s,r,simulationRunning}) {
+function V3PredictionResults({prediction,error,diagnostics,onOpenHourlySimulation}) {
+  if(!prediction&&!error&&!diagnostics?.numericOutOfRange?.length) return null;
 
-  const g=s.geometry;
+  const numericRangeDiagnostics=prediction ? diagnostics?.numericOutOfRange||[] : [];
+  const backendDiagnosticWarnings=(prediction?.warnings||[])
+    .filter(warning=>!warning.includes('outside the training range'));
+  const hasModelDiagnostics=numericRangeDiagnostics.length>0||backendDiagnosticWarnings.length>0;
 
-  const indoor=r.avg;
-  const outdoor=r.rows?.[0]?.out ?? 0;
+  const outputRows=v3OutputRows(prediction);
 
-  const temperatureDifference=indoor-s.target;
+  return (
+    <section className="v3-results-card" aria-live="polite">
+      <div className="v3-results-heading">
+        <div>
+          <div className="eyebrow">THERMAL CASE SUMMARY</div>
+          <p>
+            The summary model returns six case-level estimates trained on physics-informed labels. Solar heat input is a rate (W),
+            heat transfer is one case-level rate (W), and thermal energy loss is reported for the modeled duration.
+            The separate hourly model predicts indoor temperature only; it does not produce hourly heat flow.
+          </p>
+        </div>
+        {prediction&&<button className="ghost v3-hourly-link" onClick={onOpenHourlySimulation}>
+          Run 24-hour model prediction
+        </button>}
+      </div>
 
-  const thermalColor =
-    indoor < s.target-3
-      ? '#1769ff'
-      : indoor < s.target-0.8
-      ? '#45a6d9'
-      : indoor <= s.target+3
-      ? '#8ed35f'
-      : '#ff5c38';
+      {error&&<div className="v3-api-error" role="alert">{error}</div>}
 
-  const heatIntensity=Math.max(
-    0.08,
-    Math.min(
-      0.8,
-      Math.abs(temperatureDifference)/10
-    )
+      {hasModelDiagnostics&&<div className="v3-model-diagnostics" role="status">
+        <strong>Model diagnostics</strong>
+        {numericRangeDiagnostics.length>0&&<>
+          <p>Some inputs are outside the observed model training range. The model still generated a prediction; reliability may be lower for these conditions.</p>
+          <ul>
+            {numericRangeDiagnostics.map(({field,value,supportedRange})=>(
+              <li key={field}><b>{field}</b> = {String(value)} (observed training range: {supportedRange})</li>
+            ))}
+          </ul>
+        </>}
+        {backendDiagnosticWarnings.length>0&&<ul>
+          {backendDiagnosticWarnings.map((warning,index)=><li key={`${index}-${warning}`}>{warning}</li>)}
+        </ul>}
+      </div>}
+
+      {prediction&&<>
+        <div className="v3-prediction-grid">
+          {outputRows.map(([label,key,unit])=>(
+            <div className="v3-prediction-value" key={key}>
+              <small>{label}</small>
+              <strong>{Number(prediction.predictions[key]).toLocaleString(undefined,{maximumFractionDigits:2})} {unit}</strong>
+            </div>
+          ))}
+        </div>
+
+        <details className="v3-input-summary">
+          <summary>View the 21 inputs sent to the summary model</summary>
+          <p className="v3-input-note">
+            Initial_Air_Temperature_C currently uses the Design page’s Target indoor temperature control. There is no separate initial-air-temperature input yet.
+          </p>
+          <dl>
+            {Object.entries(prediction.input_summary).map(([name,value])=>(
+              <div key={name}>
+                <dt>{name}</dt>
+                <dd>{String(value)}</dd>
+              </div>
+            ))}
+          </dl>
+        </details>
+      </>}
+    </section>
   );
+}
+
+function Design3DSimulation({s,materials}) {
+  const g=s.geometry;
 
   return (
     <div className="design-simulation">
@@ -712,33 +1034,17 @@ function Design3DSimulation({s,r,simulationRunning}) {
       <div className="simulation-header">
 
         <div>
-          <span>
-            {simulationRunning
-              ? 'THERMAL SIMULATION ACTIVE'
-              : 'LIVE 3D THERMAL MODEL'}
-          </span>
+          <span>GEOMETRY PREVIEW · NO THERMAL FIELD</span>
 
           <strong>
             {g.length} × {g.width} × {g.height} m
           </strong>
         </div>
 
-        <div className="simulation-live">
-
-          <i></i>
-
-          {simulationRunning
-            ? 'CALCULATING'
-            : 'READY'}
-
-        </div>
-
       </div>
 
 
-      <div className={`design-canvas ${
-        simulationRunning ? 'thermal-running' : ''
-      }`}>
+      <div className="design-canvas">
 
         <Canvas
           camera={{
@@ -752,22 +1058,9 @@ function Design3DSimulation({s,r,simulationRunning}) {
           dpr={[1,2]}
         >
 
-          <ambientLight
-            intensity={
-              simulationRunning
-                ? 0.7
-                : 1.4
-            }
-          />
+          <ambientLight intensity={1.4} />
 
-          <directionalLight
-            position={[6,8,6]}
-            intensity={
-              simulationRunning
-                ? 3
-                : 2.5
-            }
-          />
+          <directionalLight position={[6,8,6]} intensity={2.5} />
 
           <directionalLight
             position={[-5,4,-4]}
@@ -792,55 +1085,7 @@ function Design3DSimulation({s,r,simulationRunning}) {
               ]}
             />
 
-            <meshStandardMaterial
-              color={thermalColor}
-              roughness={0.72}
-              metalness={0.05}
-              transparent
-              opacity={
-                simulationRunning
-                  ? 0.72
-                  : 0.88
-              }
-
-              emissive={thermalColor}
-
-              emissiveIntensity={
-                simulationRunning
-                  ? heatIntensity
-                  : 0.05
-              }
-            />
-
-          </mesh>
-
-
-          {/* INNER THERMAL FIELD */}
-          <mesh
-            position={[
-              0,
-              g.height/2,
-              0
-            ]}
-          >
-
-            <boxGeometry
-              args={[
-                Math.max(g.length-0.45,0.5),
-                Math.max(g.height-0.45,0.5),
-                Math.max(g.width-0.45,0.5)
-              ]}
-            />
-
-            <meshBasicMaterial
-              color={thermalColor}
-              transparent
-              opacity={
-                simulationRunning
-                  ? 0.22
-                  : 0.06
-              }
-            />
+            <meshStandardMaterial color="#687482" roughness={0.72} metalness={0.05} />
 
           </mesh>
 
@@ -893,15 +1138,7 @@ function Design3DSimulation({s,r,simulationRunning}) {
               ]}
             />
 
-            <meshStandardMaterial
-              color="#9bdcff"
-              emissive="#58bde8"
-              emissiveIntensity={
-                simulationRunning
-                  ? 1.4
-                  : 0.4
-              }
-            />
+            <meshStandardMaterial color="#9bdcff" />
 
           </mesh>
 
@@ -937,52 +1174,7 @@ function Design3DSimulation({s,r,simulationRunning}) {
           </mesh>
 
 
-          {/* HEAT FLOW PARTICLES */}
-          {simulationRunning &&
-            Array.from({length:18},(_,i)=>{
-
-              const angle=(i/18)*Math.PI*2;
-
-              const radius=
-                Math.min(g.length,g.width)*0.28;
-
-              const x=
-                Math.cos(angle)*radius;
-
-              const z=
-                Math.sin(angle)*radius;
-
-              const y=
-                0.35+
-                ((i*0.37)%1)*
-                Math.max(g.height-0.7,1);
-
-              return (
-                <mesh
-                  key={i}
-                  position={[x,y,z]}
-                >
-
-                  <sphereGeometry
-                    args={[0.045,12,12]}
-                  />
-
-                  <meshBasicMaterial
-                    color={
-                      indoor>=s.target
-                        ? '#ff7048'
-                        : '#58aaff'
-                    }
-                  />
-
-                </mesh>
-              );
-
-            })
-          }
-
-
-          {/* SOLAR SOURCE */}
+          {/* Decorative sun; this preview does not calculate solar transfer. */}
           <mesh
             position={[
               g.length*0.8,
@@ -1027,8 +1219,8 @@ function Design3DSimulation({s,r,simulationRunning}) {
             enablePan={false}
             minDistance={4}
             maxDistance={14}
-            autoRotate={simulationRunning}
-            autoRotateSpeed={0.8}
+            autoRotate
+            autoRotateSpeed={0.35}
           />
 
           <Environment preset="city"/>
@@ -1036,93 +1228,12 @@ function Design3DSimulation({s,r,simulationRunning}) {
         </Canvas>
 
 
-        {/* SIMULATION OVERLAY */}
-
-        {simulationRunning && (
-
-          <div className="thermal-simulation-overlay">
-
-            <div className="simulation-pulse"></div>
-
-            <strong>
-              THERMAL FIELD UPDATING
-            </strong>
-
-            <span>
-              {indoor.toFixed(1)}°C indoor
-              {' · '}
-              {outdoor.toFixed(1)}°C ambient
-            </span>
-
-          </div>
-
-        )}
-
-
-        <div className="thermal-legend">
-
-          <div>
-            <span className="legend-dot cold"></span>
-            COLD
-          </div>
-
-          <div>
-            <span className="legend-dot comfort"></span>
-            COMFORT
-          </div>
-
-          <div>
-            <span className="legend-dot hot"></span>
-            HOT
-          </div>
-
-        </div>
-
       </div>
 
 
-      {/* RESULTS */}
-
-      <div className="design-live-results">
-
-        <div>
-          <small>OUTDOOR</small>
-          <strong>
-            {outdoor.toFixed(1)}°C
-          </strong>
-        </div>
-
-        <div className="result-highlight">
-
-          <small>SIMULATED INDOOR</small>
-
-          <strong>
-            {indoor.toFixed(1)}°C
-          </strong>
-
-          <span>
-            {temperatureDifference>=0 ? '+' : ''}
-            {temperatureDifference.toFixed(1)}°C
-            {' from target'}
-          </span>
-
-        </div>
-
-        <div>
-          <small>TARGET</small>
-          <strong>
-            {s.target.toFixed(1)}°C
-          </strong>
-        </div>
-
-        <div>
-          <small>THERMAL SCORE</small>
-          <strong>
-            {r.thermalScore.toFixed(1)}
-          </strong>
-        </div>
-
-      </div>
+      <p className="geometry-preview-note">
+        Shape, dimensions, and openings only; compass orientation remains in the design inputs. This view does not show a calculated temperature or heat-flow field; case-level estimates appear below after you run the summary model.
+      </p>
 
 
       <div className="design-model-footer">
@@ -1130,29 +1241,23 @@ function Design3DSimulation({s,r,simulationRunning}) {
         <span>MATERIAL</span>
 
         <strong>
-          {MATERIALS[s.layers[0]].name}
-          {' Adobe + Insulation + Concrete'}
+          {s.layers.map((id)=>materials[id]?.name||id).join(' + ')}
+          {' · '}{(s.layerThicknesses?.reduce((sum,value)=>sum+value,0)
+            ??s.layers.reduce((sum,id)=>sum+(materials[id]?.t||0),0)).toFixed(3)}{' m wall'}
         </strong>
 
-        <span className="model-update">
-          {simulationRunning
-            ? 'SIMULATING'
-            : 'LIVE MODEL'}
-        </span>
+        <span className="model-update">GEOMETRY ONLY</span>
 
       </div>
 
     </div>
   );
 }
-function ShelterVisual({s,r}){return <div className="visual-panel"><div className="visual-top"><span>INTERACTIVE SHELTER MODEL</span><span>{s.geometry.length} × {s.geometry.width} × {s.geometry.height} m</span></div><div className="scene"><div className="model3d"><div className="mroof"></div><div className="mfront"><div className="mwindow"></div><div className="mdoor"></div></div><div className="mside"></div></div><div className="axis">N ↑<br/>← W &nbsp; E →<br/>S ↓</div></div><div className="metrics"><div><small>MIN INDOOR</small><b>{r.min.toFixed(1)}°C</b></div><div><small>AVG INDOOR</small><b>{r.avg.toFixed(1)}°C</b></div><div><small>SOLAR</small><b>{r.solar.toFixed(1)} kWh</b></div><div><small>HEAT LOSS</small><b>{r.heatLoss.toFixed(1)} kWh</b></div></div></div>}
-
-function ClimatePage() {
-  const climate = CLIMATE.leh;
-
+function ClimatePage({onBack}) {
   return (
     <main className="section climate-page">
 
+      <PageBackLink label="Back to Overview" onClick={onBack}/>
       <div className="eyebrow">
         CLIMATE
       </div>
@@ -1167,121 +1272,55 @@ function ClimatePage() {
       </p>
 
       <div className="climate-grid">
-        {Object.entries(CLIMATE).map(([id, c]) => (
-          <div className="climate-card" key={id}>
-
+        {Object.entries(CLIMATE).map(([id, c]) => {
+          const lower=c.mean-c.amp;
+          const upper=c.mean+c.amp;
+          const left=clamp(((lower+20)/60)*100,0,100);
+          const width=clamp(((upper-lower)/60)*100,0,100-left);
+          return <article className="climate-card climate-reference-card" key={id}>
             <span>{c.name}</span>
-
-            <strong>
-              {c.mean}°C
-            </strong>
-
-            <p>
-              Peak solar {c.solar} W/m² · daily swing ±{c.amp}°C
-            </p>
-
-            <small>
-              {c.elevation} · {c.season}
-            </small>
-
-          </div>
-        ))}
+            <strong>{c.mean}°C</strong>
+            <div className="climate-envelope" aria-label={`Reference envelope ${lower} to ${upper} degrees Celsius`}>
+              <div className="climate-envelope-labels"><small>{lower}°</small><small>reference envelope</small><small>{upper}°C</small></div>
+              <div className="climate-envelope-track"><i style={{left:`${left}%`,width:`${width}%`}}/></div>
+            </div>
+            <p>Peak solar {c.solar} W/m² · wind {c.wind} m/s</p>
+            <small>{c.elevation} · {c.season} · relative humidity {c.humidity}%</small>
+          </article>;
+        })}
       </div>
 
 
-      <div className="panel climate-profile">
-
-        <div className="climate-profile-head">
-
-          <div>
-            <div className="eyebrow">
-              24-HOUR PROFILE
-            </div>
-
-            <h3>
-              Representative outdoor temperature
-            </h3>
-          </div>
-
-          <span className="profile-meta">
-            LEH · LADAKH · WINTER REFERENCE
-          </span>
-
-        </div>
-
-
-        <div className="tempbars">
-
-          {Array.from({ length: 24 }, (_, h) => {
-
-            const temperature = outdoorTemp(climate, h);
-
-            const height = clamp(
-              ((temperature + 15) / 35) * 100,
-              8,
-              100
-            );
-
-            return (
-              <div
-                className="barwrap"
-                key={h}
-                title={`${String(h).padStart(2, "0")}:00 · ${temperature.toFixed(1)}°C`}
-              >
-
-                <div
-                  className="bar"
-                  style={{
-                    height: `${height}%`
-                  }}
-                />
-
-                <small>
-                  {String(h).padStart(2, "0")}
-                </small>
-
-              </div>
-            );
-
-          })}
-
-        </div>
-
-
-        <div className="profile-axis">
-          <span>00:00</span>
-          <span>06:00</span>
-          <span>12:00</span>
-          <span>18:00</span>
-          <span>24:00</span>
-        </div>
-
-
-        <p className="profile-note">
-          Reference outdoor temperature profile used as a climate boundary
-          condition for the thermal model.
+      <div className="panel climate-profile climate-source-panel">
+        <div className="eyebrow">REFERENCE DATA AND FORECASTS</div>
+        <h3>Profiles are reference conditions, not a live forecast.</h3>
+        <p>
+          These temperature ranges, peak radiation, wind, humidity and elevation values are fixed
+          inputs for the case-level summary workflow. Engineering Simulation requests a complete
+          next-day hourly forecast and sends those source values to the hourly model.
         </p>
-
+        <p>
+          For case-summary inputs, outdoor temperature is derived from the profile's mean and daily swing at hour 0;
+          the daily solar input is approximated from peak radiation and six equivalent full-sun hours. These are fixed
+          reference assumptions, not a weather forecast or a model-produced solar-energy result in Wh.
+        </p>
+        <p>
+          Weather source: <a href={OPEN_METEO_ATTRIBUTION.url} target="_blank" rel="noreferrer">
+            {OPEN_METEO_ATTRIBUTION.label}
+          </a> ({OPEN_METEO_ATTRIBUTION.license}). The geometry preview is illustrative and is not used as weather input.
+        </p>
       </div>
 
     </main>
   );
 }
 
-function MaterialsPage() {
-  const materialTypes = {
-    stone: 'MASSIVE',
-    brick: 'MASONRY',
-    concrete: 'STRUCTURAL',
-    adobe: 'EARTH',
-    rammed: 'EARTH',
-    timber: 'BIO-BASED',
-    insulation: 'INSULATION'
-  };
+function MaterialsPage({materials,materialStatus,onBack}) {
 
   return (
     <main className="section materials-page">
 
+      <PageBackLink label="Back to Overview" onClick={onBack}/>
       <div className="eyebrow">MATERIALS</div>
 
       <h1>Material library.</h1>
@@ -1294,7 +1333,7 @@ function MaterialsPage() {
       <div className="material-library-header">
 
         <div>
-          <strong>{Object.keys(MATERIALS).length}</strong>
+          <strong>{Object.keys(materials).length}</strong>
           <span>REFERENCE MATERIALS</span>
         </div>
 
@@ -1312,7 +1351,7 @@ function MaterialsPage() {
 
       <div className="material-grid premium-material-grid">
 
-        {Object.entries(MATERIALS).map(([id, m]) => {
+        {Object.entries(materials).map(([id, m]) => {
 
           const rValue = m.t / m.k;
 
@@ -1332,7 +1371,7 @@ function MaterialsPage() {
                 </div>
 
                 <div className="material-category">
-                  {materialTypes[id]}
+                  {(m.category||id).toUpperCase()}
                 </div>
 
                 <div className="material-thickness">
@@ -1416,9 +1455,8 @@ function MaterialsPage() {
           <strong>Engineering data note</strong>
 
           <p>
-            These are reference material properties used by the prototype
-            thermal model. Final engineering deployment should use verified
-            material data for the selected region and construction system.
+            These are the reference material properties supplied to the model input builder. They are not a substitute
+            for project-specific verified material data; source notes are shown with each catalog item where available.
           </p>
         </div>
 
@@ -1428,807 +1466,905 @@ function MaterialsPage() {
   );
 }
 
-function Simulation({s,r}) {
-  const [hour,setHour] = useState(12);
-  const [running,setRunning] = useState(true);
+function HourlyTemperatureChart({values,targetC,selectedHour,onSelectHour}) {
+  const numericValues=values.map(value=>Number(value));
+  const low=Math.min(...numericValues,targetC);
+  const high=Math.max(...numericValues,targetC);
+  const pad=Math.max((high-low)*0.16,1);
+  const min=low-pad;
+  const max=high+pad;
+  const range=max-min||1;
+  const points=numericValues.map((value,index)=>{
+    const x=34+(index*652)/Math.max(numericValues.length-1,1);
+    const y=204-((value-min)/range)*168;
+    return `${x},${y}`;
+  }).join(' ');
+  const targetY=204-((targetC-min)/range)*168;
+  return <section className="hourly-chart-panel" aria-labelledby="hourly-chart-title">
+    <div className="hourly-chart-heading"><div><div className="eyebrow">24-HOUR INDOOR TEMPERATURE</div><h2 id="hourly-chart-title">Forecast response across the day.</h2></div><span>°C</span></div>
+    <div className="hourly-chart-frame">
+      <svg viewBox="0 0 720 250" preserveAspectRatio="none" role="img" aria-label="Hourly indoor-temperature predictions with target temperature reference">
+        <title>Predicted indoor temperature by forecast hour</title>
+        {[0,1,2,3].map(index=>{
+          const y=36+index*56;
+          const value=max-(index/3)*range;
+          return <g key={index}><line x1="34" x2="686" y1={y} y2={y} className="hourly-chart-gridline"/><text x="27" y={y+4} textAnchor="end" className="hourly-chart-axis">{value.toFixed(0)}°</text></g>;
+        })}
+        <line x1="34" x2="686" y1={targetY} y2={targetY} className="hourly-chart-target"/>
+        <polyline points={points} className="hourly-chart-line"/>
+        {numericValues.map((value,index)=>{
+          const x=34+(index*652)/Math.max(numericValues.length-1,1);
+          const y=204-((value-min)/range)*168;
+          return <circle key={index} cx={x} cy={y} r={index===selectedHour?6:3.2} className={index===selectedHour?'hourly-chart-point selected':'hourly-chart-point'} role="button" tabIndex="0" aria-label={`Select hour ${index}: ${value.toFixed(1)} degrees Celsius`} onClick={()=>onSelectHour(index)} onKeyDown={event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();onSelectHour(index);}}} />;
+        })}
+        {[0,6,12,18,23].map(index=>{
+          const x=34+(index*652)/23;
+          const label=index===23?'24:00':`${String(index).padStart(2,'0')}:00`;
+          return <text key={index} x={x} y="236" textAnchor={index===0?'start':index===23?'end':'middle'} className="hourly-chart-axis">{label}</text>;
+        })}
+      </svg>
+    </div>
+    <div className="hourly-chart-legend"><span><i className="chart-legend-temperature"/>Predicted indoor temperature</span><span><i className="chart-legend-target"/>Target {targetC.toFixed(1)}°C</span><small>Select a point or use the hourly values below.</small></div>
+  </section>;
+}
 
-  const point = r.rows[hour] || r.rows[0];
-  const temp = point.tin;
-  const outdoor = point.out;
-  const gain = point.gain || 0;
-  const loss = point.loss || 0;
-  const net = point.net || 0;
+function Simulation({s,materials,prediction,loading,error,errorDetail,weatherProfile,requestPayload,onRun,onGoDesign,onBackToOptimize,onContinueToReport}) {
+  const [hour,setHour]=useState(0);
+  const predictedValues=prediction?.predicted_indoor_temperature_C;
+  const forecastPoints=weatherProfile?.displayPoints;
+  const ready=Array.isArray(predictedValues)&&predictedValues.length===24
+    &&Array.isArray(forecastPoints)&&forecastPoints.length===24;
+  const currentPoint=ready?forecastPoints[hour]:null;
+  const temp=ready?selectHourlyIndoorTemperature(prediction,hour):null;
 
-  const thermalState =
-    temp < s.target - 3 ? "COLD"
-    : temp < s.target - 0.8 ? "COOL"
-    : temp > s.target + 3 ? "HOT"
-    : "COMFORT";
+  if(!ready){
+    return (
+      <main className="section simulation-page">
+        <PageBackLink label="Back to Optimize" onClick={onBackToOptimize}/>
+        <div className="eyebrow">ENGINEERING SIMULATION · HOURLY TEMPERATURE</div>
+        <div className="simulation-heading">
+          <div>
+            <h1>24-hour temperature prediction.</h1>
+            <p className="lede">The selected location's next complete local-day forecast is sent with the current shelter design to the hourly model.</p>
+          </div>
+          <div className={'solver-status '+(loading?'live':'')}>
+            <span className="status-dot"></span>
+            {loading?'MODEL RUNNING':'MODEL READY'}
+          </div>
+        </div>
+        <section className="panel hourly-prediction-state" aria-live="polite">
+          <div className="eyebrow">HOURLY MODEL STATUS</div>
+          <h2>{loading?'Requesting 24-hour temperature predictions...':error||'No hourly prediction is available for this design.'}</h2>
+          {errorDetail&&<p className="hourly-error-detail">{errorDetail}</p>}
+          {loading&&<p>Fetching the external hourly forecast, then requesting 24 indoor-temperature predictions.</p>}
+          <div className="hourly-state-actions">
+            <button className="primary" onClick={onRun} disabled={loading}>
+              {loading?'Requesting 24-hour temperature predictions...':'Retry prediction'}
+            </button>
+            <button className="ghost" onClick={onGoDesign}>Review design</button>
+          </div>
+          {weatherProfile&&<p className="hourly-source-line">
+            Forecast received for {weatherProfile.location}, {weatherProfile.localDate} ({weatherProfile.timezone}).
+          </p>}
+        </section>
+        <p className="hourly-attribution">
+          Weather forecast by <a href={OPEN_METEO_ATTRIBUTION.url} target="_blank" rel="noreferrer">{OPEN_METEO_ATTRIBUTION.label}</a>
+          {' '}({OPEN_METEO_ATTRIBUTION.license}). The hourly view does not fall back to a locally generated forecast.
+        </p>
+        <WorkflowActions nextLabel="Continue to Report" onNext={onContinueToReport}/>
+      </main>
+    );
+  }
 
-  const tempPct = clamp(((temp + 5) / 30) * 100, 8, 92);
-  const targetPct = clamp(((s.target + 5) / 30) * 100, 8, 92);
-  const outsidePct = clamp(((outdoor + 15) / 40) * 100, 8, 92);
+  const outdoor=currentPoint.Outdoor_Temperature_C;
+  const solar=currentPoint.Solar_Radiation_W_m2;
+  const wind=currentPoint.Wind_Speed_m_s;
+  const localClock=currentPoint.localTime.slice(11,16);
+  const targetDifference=temp-s.target;
+  const targetDifferenceLabel=`${targetDifference>=0?'+':''}${targetDifference.toFixed(1)}°C from target`;
+  const tempPct=clamp(((temp+5)/30)*100,8,92);
+  const targetPct=clamp(((s.target+5)/30)*100,8,92);
+  const outOfRange=prediction?.diagnostics?.out_of_observed_range||[];
 
   return (
     <main className="section simulation-page">
-
-      <div className="eyebrow"> THERMAL SIMULATION ENGINE</div>
-
+      <PageBackLink label="Back to Optimize" onClick={onBackToOptimize}/>
+      <div className="eyebrow">ENGINEERING SIMULATION · HOURLY TEMPERATURE</div>
       <div className="simulation-heading">
         <div>
-          <h1>Watch the shelter respond.</h1>
-          <p className="lede">
-            A 24-hour transient thermal visualization driven by the current
-            climate, geometry, envelope and internal gains.
-          </p>
+          <h1>Watch the predicted indoor temperature.</h1>
+          <p className="lede">A 24-hour indoor-temperature curve from the hourly model, using the selected location's external weather forecast and current shelter design. The scene below is illustrative only; no spatial temperature or heat-flow field is calculated.</p>
         </div>
-
-        <div className={`solver-status ${running ? "live" : ""}`}>
-          <span className="status-dot"></span>
-          {running ? "MODEL RUNNING" : "MODEL PAUSED"}
+        <div className="simulation-heading-actions">
+          <div className={'solver-status '+(loading?'live':'')}>
+            <span className="status-dot"></span>
+            {loading?'MODEL RUNNING':'24-HOUR PREDICTION READY'}
+          </div>
+          <button className="ghost" onClick={onRun} disabled={loading}>
+            {loading?'Requesting 24-hour temperature predictions...':'Refresh forecast and prediction'}
+          </button>
         </div>
       </div>
 
-      {/* MAIN SIMULATION VIEW */}
-      <section className="thermal-console">
+      {error&&<div className="hourly-api-error" role="alert">
+        <strong>{error}</strong>{errorDetail&&<small>{errorDetail}</small>}
+      </div>}
 
+      <section className="thermal-console">
         <div className="console-top">
           <div>
-            <span className="console-label">THERMOSHELTER TRANSIENT ENGINE</span>
-            <strong>THERMAL FIELD / 24H</strong>
+            <span className="console-label">HOURLY INDOOR-TEMPERATURE MODEL</span>
+            <strong>INDOOR TEMPERATURE / 24H</strong>
           </div>
-
           <div className="console-meta">
-            <span>CASE: LEH-WINTER</span>
-            <span>Δt = 1 HOUR</span>
-            <span>STEP {String(hour + 1).padStart(2,"0")}/24</span>
+            <span>{weatherProfile.location.toUpperCase()}</span>
+            <span>{weatherProfile.localDate}</span>
+            <span>STEP {String(hour+1).padStart(2,'0')}/24</span>
           </div>
         </div>
 
-        <div className="thermal-stage">
+        <p className="hourly-scene-note">
+          The selected-hour indoor temperature and forecast values are model/API outputs. The shelter scene is a static illustration and does not visualize heat transfer.
+        </p>
 
-          {/* OUTSIDE TEMPERATURE */}
+        <div className="thermal-stage">
           <div className="environment-readout left-readout">
-            <small>OUTSIDE</small>
+            <small>OUTDOOR FORECAST</small>
             <strong>{outdoor.toFixed(1)}°C</strong>
-            <span>Ambient boundary</span>
+            <span>{localClock} · Open-Meteo</span>
           </div>
 
-          {/* ANIMATED FIELD */}
           <div className="thermal-scene">
-
             <div className="sun-orb">
               <div className="sun-core"></div>
               <div className="sun-rays"></div>
             </div>
-
             <div className="cold-field"></div>
             <div className="warm-field"></div>
-
-            {/* HEAT PARTICLES */}
-            <div className="heat-particles">
-              {Array.from({length:18},(_,i)=>(
-                <i
-                  key={i}
-                  className="heat-particle"
-                  style={{
-                    "--i": i,
-                    "--delay": `${(i % 6) * 0.55}s`,
-                    "--x": `${18 + (i * 17) % 65}%`,
-                    "--y": `${25 + (i * 29) % 48}%`
-                  }}
-                />
-              ))}
-            </div>
-
-            {/* SHELTER */}
             <div className="thermal-shelter">
-
               <div className="thermal-roof">
-                <span className="layer-tag stone-tag">STONE</span>
-                <span className="layer-tag insulation-tag">INSULATION</span>
+                <span className="layer-tag stone-tag">{materials[s.layers[0]]?.name||'WALL'}</span>
+                <span className="layer-tag insulation-tag">THERMAL ENVELOPE</span>
               </div>
-
               <div className="thermal-wall wall-left">
                 <span className="wall-layer stone-layer"></span>
                 <span className="wall-layer insulation-layer"></span>
                 <span className="wall-layer concrete-layer"></span>
               </div>
-
               <div className="thermal-wall wall-right">
                 <span className="wall-layer stone-layer"></span>
                 <span className="wall-layer insulation-layer"></span>
                 <span className="wall-layer concrete-layer"></span>
               </div>
-
-              <div
-                className="thermal-interior"
-                style={{
-                  "--temperature": `${tempPct}%`
-                }}
-              >
-
-                <div className="interior-glow"></div>
-
+              <div className="thermal-interior">
                 <div className="window-glow"></div>
-
-                <div className="occupant">
-                  <span className="person-head"></span>
-                  <span className="person-body"></span>
-                </div>
-
-                <div className="heat-wave wave-1"></div>
-                <div className="heat-wave wave-2"></div>
-                <div className="heat-wave wave-3"></div>
-
-                <div className="inside-temp">
-                  <small>INDOOR</small>
+                <div className="inside-temp" data-testid="hourly-indoor-temperature">
+                  <small>MODEL PREDICTION</small>
                   <strong>{temp.toFixed(1)}°C</strong>
-                  <span>{thermalState}</span>
+                  <span>{targetDifferenceLabel}</span>
                 </div>
-
               </div>
-
               <div className="thermal-floor"></div>
-
-            </div>
-
-            {/* HEAT FLOW ARROWS */}
-            <div className="flow-arrows">
-              <span className="flow-arrow a1">→</span>
-              <span className="flow-arrow a2">→</span>
-              <span className="flow-arrow a3">→</span>
-              <span className="flow-arrow a4">→</span>
             </div>
 
           </div>
 
-          {/* INSIDE TEMPERATURE */}
           <div className="environment-readout right-readout">
-            <small>INSIDE</small>
+            <small>INDOOR PREDICTION</small>
             <strong>{temp.toFixed(1)}°C</strong>
             <span>Target {s.target.toFixed(1)}°C</span>
           </div>
-
         </div>
 
-        {/* TIMELINE */}
         <div className="simulation-timeline">
-
           <div className="timeline-labels">
-            <span>00:00</span>
-            <span>06:00</span>
-            <span>12:00</span>
-            <span>18:00</span>
-            <span>24:00</span>
+            <span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>24:00</span>
           </div>
-
           <input
             className="thermal-slider"
             type="range"
             min="0"
             max="23"
             value={hour}
+            aria-label="Select prediction hour"
+            data-testid="hourly-slider"
             onChange={e=>setHour(Number(e.target.value))}
           />
-
-          <div className="timeline-current">
-            <span>SIMULATION TIME</span>
-            <strong>{String(hour).padStart(2,"0")}:00</strong>
+          <div className="timeline-current" data-testid="hourly-selected-hour">
+            <span>FORECAST HOUR {String(hour).padStart(2,'0')}</span>
+            <strong>{localClock}</strong>
           </div>
-
         </div>
-
       </section>
 
-      {/* LIVE METRICS */}
+      <HourlyTemperatureChart values={predictedValues} targetC={s.target} selectedHour={hour} onSelectHour={setHour}/>
+
+      <section className="hourly-temperature-series" aria-labelledby="hourly-temperature-title">
+        <div className="eyebrow">24-HOUR MODEL OUTPUTS</div>
+        <h2 id="hourly-temperature-title">Indoor temperature by hour.</h2>
+        <p>All 24 values below come from the hourly model. Select an hour to inspect its forecast inputs; no hourly heat-flow values are produced.</p>
+        <div className="hourly-temperature-grid">
+          {predictedValues.map((value,index)=>{
+            const forecastTime=forecastPoints[index]?.localTime;
+            const time=forecastTime?forecastTime.slice(11,16):`${String(index).padStart(2,'0')}:00`;
+            return <button
+              className="hourly-temperature-item"
+              key={index}
+              type="button"
+              data-testid={`hourly-temperature-${index}`}
+              aria-label={`Hour ${index}, ${time}: predicted indoor temperature ${value.toFixed(2)} degrees Celsius`}
+              aria-pressed={hour===index}
+              onClick={()=>setHour(index)}
+            >
+              <span>HOUR {String(index).padStart(2,'0')} · {time}</span>
+              <strong>{value.toFixed(1)}°C</strong>
+            </button>;
+          })}
+        </div>
+      </section>
+
       <section className="simulation-metrics">
-
         <div className="sim-metric">
-          <span>INDOOR TEMPERATURE</span>
+          <span>PREDICTED INDOOR TEMPERATURE</span>
           <strong>{temp.toFixed(1)}°C</strong>
-          <small>
-            {temp >= s.target ? "+" : ""}
-            {(temp-s.target).toFixed(1)}°C from target
-          </small>
+          <small>Hour {hour} · hourly model</small>
         </div>
-
         <div className="sim-metric">
-          <span>SOLAR INPUT</span>
-          <strong>{gain.toFixed(0)} W</strong>
-          <small>Current thermal gain</small>
+          <span>OUTDOOR TEMPERATURE</span>
+          <strong>{outdoor.toFixed(1)}°C</strong>
+          <small>Open-Meteo forecast input</small>
         </div>
-
         <div className="sim-metric">
-          <span>HEAT LOSS</span>
-          <strong>{loss.toFixed(0)} W</strong>
-          <small>Envelope + openings</small>
+          <span>SOLAR RADIATION</span>
+          <strong>{solar.toFixed(0)} W/m²</strong>
+          <small>Open-Meteo hourly forecast input</small>
         </div>
-
         <div className="sim-metric">
-          <span>NET THERMAL FLOW</span>
-          <strong>{net >= 0 ? "+" : ""}{net.toFixed(0)} W</strong>
-          <small>{net >= 0 ? "Heat entering" : "Heat leaving"}</small>
+          <span>WIND SPEED</span>
+          <strong>{wind.toFixed(1)} m/s</strong>
+          <small>Open-Meteo hourly forecast input</small>
         </div>
-
       </section>
 
-      {/* THERMAL GAUGES */}
       <section className="simulation-lower">
-
         <div className="panel thermal-gauge-panel">
-
-          <div className="eyebrow">TEMPERATURE FIELD</div>
-          <h2>Thermal state</h2>
-
+          <div className="eyebrow">PREDICTED TEMPERATURE</div>
+          <h2>Indoor temperature</h2>
           <div className="temperature-gauge">
-
             <div className="gauge-scale">
-              <span>30°C</span>
-              <span>25°C</span>
-              <span>20°C</span>
-              <span>15°C</span>
-              <span>10°C</span>
-              <span>5°C</span>
+              <span>30°C</span><span>25°C</span><span>20°C</span><span>15°C</span><span>10°C</span><span>5°C</span>
             </div>
-
             <div className="gauge-track">
-
-              <div
-                className="target-marker"
-                style={{bottom:`${targetPct}%`}}
-              >
-                <span>TARGET</span>
-              </div>
-
-              <div
-                className="temperature-marker"
-                style={{bottom:`${tempPct}%`}}
-              >
-                <span>{temp.toFixed(1)}°</span>
-              </div>
-
+              <div className="target-marker" style={{bottom:String(targetPct)+'%'}}><span>TARGET</span></div>
+              <div className="temperature-marker" style={{bottom:String(tempPct)+'%'}}><span>{temp.toFixed(1)}°</span></div>
             </div>
-
           </div>
-
           <div className="gauge-footer">
             <span>Outdoor {outdoor.toFixed(1)}°C</span>
-            <strong>{thermalState}</strong>
+            <strong>{targetDifferenceLabel}</strong>
             <span>Target {s.target.toFixed(1)}°C</span>
           </div>
-
         </div>
 
-        <div className="panel energy-panel">
-
-          <div className="eyebrow">LIVE ENERGY BALANCE</div>
-          <h2>Where the heat is going.</h2>
-
-          <div className="energy-bars">
-
-            <EnergyBar
-              label="Solar gain"
-              value={gain}
-              max={Math.max(gain,loss,1)}
-              positive
-            />
-
-            <EnergyBar
-              label="Envelope + openings"
-              value={loss}
-              max={Math.max(gain,loss,1)}
-            />
-
-            <EnergyBar
-              label="Occupant gain"
-              value={s.occupants * 100}
-              max={Math.max(gain,loss,s.occupants*100,1)}
-              positive
-            />
-
+        <div className="panel energy-panel hourly-weather-panel">
+          <div className="eyebrow">HOURLY WEATHER INPUTS</div>
+          <h2>Conditions at {localClock}.</h2>
+          <div className="hourly-weather-readouts">
+            <div><small>OUTDOOR</small><strong>{outdoor.toFixed(1)}°C</strong></div>
+            <div><small>SOLAR</small><strong>{solar.toFixed(0)} W/m²</strong></div>
+            <div><small>WIND</small><strong>{wind.toFixed(1)} m/s</strong></div>
           </div>
-
-          <div className="energy-total">
-            <span>24-HOUR SOLAR</span>
-            <strong>{r.solar.toFixed(1)} kWh</strong>
-          </div>
-
-        </div>
-
-      </section>
-
-      {/* MODEL STATUS */}
-      <section className="simulation-bottom">
-
-        <div className="panel">
-
-          <div className="eyebrow">SIMULATION STATUS</div>
-
-          <div className="status-grid">
-
-            <div>
-              <small>CLIMATE</small>
-              <strong>{CLIMATE[s.location].name}</strong>
-            </div>
-
-            <div>
-              <small>ENVELOPE U-VALUE</small>
-              <strong>{r.U.toFixed(3)} W/m²·K</strong>
-            </div>
-
-            <div>
-              <small>THERMAL MASS</small>
-              <strong>{(r.R / r.U).toFixed(2)} relative</strong>
-            </div>
-
-            <div>
-              <small>MODEL STEPS</small>
-              <strong>24 / 24 COMPLETE</strong>
-            </div>
-
-          </div>
-
-        </div>
-
-        <div className="panel simulation-explanation">
-
-          <div className="eyebrow">MODEL INTERPRETATION</div>
-
-          <h3>
-            {net >= 0
-              ? "The shelter is gaining thermal energy."
-              : "The shelter is losing thermal energy."
-            }
-          </h3>
-
-          <p>
-            At {String(hour).padStart(2,"0")}:00, the model estimates an indoor
-            temperature of <b>{temp.toFixed(1)}°C</b> while the ambient
-            temperature is <b>{outdoor.toFixed(1)}°C</b>.
-            The current net thermal flow is <b>{net.toFixed(0)} W</b>.
+          <p className="hourly-no-heat-flow">
+            The hourly model returns indoor temperature only. No hourly heat loss, solar heat input or heat-transfer rate is inferred here.
           </p>
-
         </div>
-
       </section>
 
+      <section className="simulation-bottom">
+        <div className="panel">
+          <div className="eyebrow">FORECAST AND MODEL</div>
+          <div className="status-grid">
+            <div><small>LOCATION</small><strong>{weatherProfile.location}</strong></div>
+            <div><small>LOCAL FORECAST DAY</small><strong>{weatherProfile.localDate}</strong></div>
+            <div><small>HOURLY WEATHER SOURCE</small><strong>{weatherProfile.source}</strong></div>
+            <div><small>INDOOR TEMPERATURE MODEL</small><strong>{prediction.model_version}</strong></div>
+          </div>
+        </div>
+        <div className="panel simulation-explanation">
+          <div className="eyebrow">MODEL INTERPRETATION</div>
+          <h3>Hour {hour}: {targetDifferenceLabel}.</h3>
+          <p>
+            At {localClock}, the hourly model predicts {temp.toFixed(2)}°C indoors from the current shelter inputs and hourly forecast. It does not predict heat-flow quantities.
+          </p>
+        </div>
+      </section>
+
+      {outOfRange.length>0&&<section className="hourly-diagnostics" role="status">
+        <strong>Model diagnostics</strong>
+        <p>{prediction.diagnostics?.message||'Some inputs are outside the observed hourly model training range. Prediction was generated; reliability may be lower.'}</p>
+        <ul>{outOfRange.map((item,index)=>(
+          <li key={item.field+'-'+index}>
+            <b>{item.field}</b> outside [{item.observed_range.join(', ')}]
+            {Array.isArray(item.hours)
+              ? ' at hours '+item.hours.join(', ')
+              : ' · value '+String(item.value)}
+          </li>
+        ))}</ul>
+      </section>}
+
+      {requestPayload&&<details className="hourly-input-disclosure">
+        <summary>View the 21 case inputs and 24 hourly weather points sent to the hourly model</summary>
+        <p>
+          The static solar input is the forecast daily peak; daily solar energy is integrated from the 24 hourly radiation values. Temperature, wind and relative humidity case inputs are day means.
+        </p>
+        <h3>21 shelter case inputs</h3>
+        <dl className="hourly-case-inputs">
+          {Object.entries(requestPayload.case_inputs).map(([name,value])=>(
+            <div key={name}><dt>{name}</dt><dd>{String(value)}</dd></div>
+          ))}
+        </dl>
+        <h3>24 hourly weather inputs</h3>
+        <div className="table-wrap hourly-profile-table-wrap">
+          <table className="hourly-profile-table">
+            <thead><tr><th>Model hour</th><th>Local time</th><th>Outdoor °C</th><th>Solar W/m²</th><th>Wind m/s</th></tr></thead>
+            <tbody>{requestPayload.hourly_climate.map((point,index)=>(
+              <tr key={point.Hour} className={point.Hour===hour?'hourly-selected-row':''}>
+                <td>{point.Hour}</td>
+                <td>{weatherProfile.displayPoints[index].localTime}</td>
+                <td>{point.Outdoor_Temperature_C}</td>
+                <td>{point.Solar_Radiation_W_m2}</td>
+                <td>{point.Wind_Speed_m_s}</td>
+              </tr>
+            ))}</tbody>
+          </table>
+        </div>
+        <p className="hourly-attribution">
+          Forecast by <a href={weatherProfile.sourceUrl} target="_blank" rel="noreferrer">{weatherProfile.source}</a> ·
+          {' '}{weatherProfile.location} ({weatherProfile.latitude}, {weatherProfile.longitude}) ·
+          {' '}{weatherProfile.localDate} · {weatherProfile.timezone} · {weatherProfile.license}.
+        </p>
+      </details>}
+
+      <p className="hourly-attribution">
+        Weather forecast by <a href={weatherProfile.sourceUrl} target="_blank" rel="noreferrer">{OPEN_METEO_ATTRIBUTION.label}</a>
+        {' '}({OPEN_METEO_ATTRIBUTION.license}) for {weatherProfile.location}. It is forecast data, not a local observation.
+        The Simulation displays hourly indoor temperature predictions only.
+      </p>
+      <WorkflowActions nextLabel="Continue to Report" onNext={onContinueToReport}/>
     </main>
   );
 }
+function Kpi({label,value}){return <div className="kpi"><small>{label}</small><strong>{value}</strong></div>}
 
-function EnergyBar({label,value,max,positive=false}) {
-  const width = clamp((value / max) * 100, 4, 100);
+function V3CandidateDiagnostics({candidate}) {
+  const outOfRange = candidate.diagnostics?.numericOutOfRange || [];
+  const extraWarnings = (candidate.prediction?.warnings || [])
+    .filter((warning) => !warning.includes('outside the training range'));
+  if (!outOfRange.length && !extraWarnings.length) return null;
 
   return (
-    <div className="energy-row">
-
-      <div className="energy-row-head">
-        <span>{label}</span>
-        <strong>{value.toFixed(0)} W</strong>
-      </div>
-
-      <div className="energy-track">
-        <i
-          className={positive ? "energy-fill positive" : "energy-fill loss"}
-          style={{width:`${width}%`}}
-        ></i>
-      </div>
-
+    <div className="candidate-model-diagnostics">
+      {outOfRange.length > 0 && (
+        <span>
+          Model diagnostics — outside the observed training range: {outOfRange
+            .map(({field,value,supportedRange})=>field+'='+value+' ('+supportedRange+')')
+            .join('; ')}. Prediction was generated; reliability may be lower for these conditions.
+        </span>
+      )}
+      {extraWarnings.map((warning,index)=><span key={index+'-'+warning}>{warning}</span>)}
     </div>
   );
 }
 
-function Kpi({label,value}){return <div className="kpi"><small>{label}</small><strong>{value}</strong></div>}
+function V3CandidateResultsTable({rows,targetTemperatureC,onApplyCandidate}) {
+  const ranked = rankV3CandidatesByTarget(rows,targetTemperatureC);
+  const rankedIds = new Set(ranked.map((candidate)=>candidate.id));
+  const displayRows = [...ranked,...rows.filter((candidate)=>!rankedIds.has(candidate.id))];
+  const formatValue = (candidate,key) => {
+    const value = candidate.prediction?.predictions?.[key];
+    return typeof value==='number'&&Number.isFinite(value)
+      ? value.toLocaleString(undefined,{maximumFractionDigits:2})
+      : '—';
+  };
 
-function Compare({ranking,s}) {
-  const best = ranking[0];
-  const second = ranking[1];
+  if(!displayRows.length) return null;
+
+  return (
+    <div className="table-wrap compare-table v3-candidate-table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Rank</th>
+            <th>Candidate configuration</th>
+            <th>Average indoor</th>
+            <th>Target indoor</th>
+            <th>Absolute target gap</th>
+            <th>Minimum indoor</th>
+            <th>Maximum indoor</th>
+            <th>Solar heat input rate (W)</th>
+            <th>Case heat transfer rate (W)</th>
+            <th>Thermal energy loss (Wh / 24 h case)</th>
+            <th>Design</th>
+          </tr>
+        </thead>
+        <tbody>
+          {displayRows.map((candidate,index)=>{
+            const prediction=candidate.prediction;
+            const rankedIndex=ranked.findIndex((item)=>item.id===candidate.id);
+            const average=prediction?.predictions?.Average_Air_Temperature_C;
+            const targetGap=typeof average==='number'?Math.abs(average-targetTemperatureC):null;
+            return (
+              <tr className={rankedIndex===0?'recommended':''} key={candidate.id}>
+                <td><span className="compare-rank">{rankedIndex>=0?'#'+(rankedIndex+1):'—'}</span></td>
+                <td>
+                  <b>{candidate.label}</b>
+                  {rankedIndex===0&&<span className="pill">CLOSEST AVG TO TARGET</span>}
+                  {candidate.error&&<small className="candidate-request-error">{candidate.error}</small>}
+                  <V3CandidateDiagnostics candidate={candidate}/>
+                </td>
+                <td>{formatValue(candidate,'Average_Air_Temperature_C')} {prediction?'°C':''}</td>
+                <td>{targetTemperatureC.toFixed(1)}°C</td>
+                <td>{targetGap===null?'—':targetGap.toFixed(2)+'°C'}</td>
+                <td>{formatValue(candidate,'Minimum_Air_Temperature_C')} {prediction?'°C':''}</td>
+                <td>{formatValue(candidate,'Maximum_Air_Temperature_C')} {prediction?'°C':''}</td>
+                <td>{formatValue(candidate,'Solar_Heat_Input_W')} {prediction?'W':''}</td>
+                <td>{formatValue(candidate,'Heat_Transfer_Rate_W')} {prediction?'W':''}</td>
+                <td>{formatValue(candidate,'Thermal_Energy_Loss_Wh')} {prediction?'Wh':''}</td>
+                <td><button className="ghost candidate-apply-button" onClick={()=>onApplyCandidate(candidate)}>Use</button></td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+      <p className="candidate-output-note">
+        Solar heat input and heat transfer are rates in W. Thermal energy loss is the aggregate for each 24-hour candidate case (Wh); these columns are not hourly flow values.
+      </p>
+    </div>
+  );
+}
+
+function CandidateEvaluationFeedback({evaluation}) {
+  if(evaluation.status==='loading') return (
+    <div className="v3-candidate-loading" role="status">Evaluating candidate predictions...</div>
+  );
+  if(!evaluation.errors?.length) return null;
+  const visibleErrors=evaluation.errors.slice(0,5);
+
+  return (
+    <div className="v3-candidate-errors" role="alert">
+      <strong>{evaluation.status==='partial'?'Some candidate requests failed.':'Candidate evaluation failed.'}</strong>
+      <ul>
+        {visibleErrors.map(({candidate,message},index)=>(
+          <li key={candidate+'-'+index}><b>{candidate}:</b> {message}</li>
+        ))}
+      </ul>
+      {evaluation.errors.length>visibleErrors.length&&<small>
+        {evaluation.errors.length-visibleErrors.length} additional candidate requests failed.
+      </small>}
+    </div>
+  );
+}
+
+function Compare({s,evaluation,onEvaluate,onApplyCandidate,onBackToDesign,onContinue}) {
+  const ranked=rankV3CandidatesByTarget(evaluation.rows,s.target);
+  const closest=ranked[0];
+  const isLoading=evaluation.status==='loading';
 
   return (
     <main className="section compare-page">
-
+      <PageBackLink label="Back to Design" onClick={onBackToDesign}/>
       <div className="eyebrow">COMPARE</div>
-
-      <h1>Compare configurations.</h1>
-
-      <p className="lede">
-        Every candidate is evaluated against the same climate, geometry and
-        target temperature so the thermal performance can be compared directly.
-      </p>
-
-      <div className="compare-summary">
-
-        <div className="compare-summary-card">
-          <small>BEST PERFORMING</small>
-          <strong>{MATERIALS[best.id].name}</strong>
-          <span>{best.r.thermalScore.toFixed(1)} / 100 thermal score</span>
-        </div>
-
-        <div className="compare-summary-card">
-          <small>LOWEST HEAT LOSS</small>
-          <strong>
-            {MATERIALS[
-              [...ranking].sort((a,b)=>a.r.heatLoss-b.r.heatLoss)[0].id
-            ].name}
-          </strong>
-          <span>
-            {[...ranking].sort((a,b)=>a.r.heatLoss-b.r.heatLoss)[0].r.heatLoss.toFixed(1)}
-            {' kWh'}
-          </span>
-        </div>
-
-        <div className="compare-summary-card">
-          <small>BEST SOLAR GAIN</small>
-          <strong>
-            {MATERIALS[
-              [...ranking].sort((a,b)=>b.r.solar-a.r.solar)[0].id
-            ].name}
-          </strong>
-          <span>
-            {[...ranking].sort((a,b)=>b.r.solar-a.r.solar)[0].r.solar.toFixed(1)}
-            {' kWh'}
-          </span>
-        </div>
-
-      </div>
-
-      <div className="table-wrap compare-table">
-
-        <table>
-
-          <thead>
-            <tr>
-              <th>Rank</th>
-              <th>Configuration</th>
-              <th>Thermal score</th>
-              <th>Comfort</th>
-              <th>Min indoor</th>
-              <th>Solar gain</th>
-              <th>Heat loss</th>
-            </tr>
-          </thead>
-
-          <tbody>
-
-            {ranking.map((x,i)=>(
-              <tr
-                className={i===0 ? "recommended" : ""}
-                key={x.id}
-              >
-
-                <td>
-                  <span className="compare-rank">
-                    #{i+1}
-                  </span>
-                </td>
-
-                <td>
-                  <b>
-                    {MATERIALS[x.id].name}
-                    {' + Insulation + Concrete'}
-                  </b>
-
-                  {i===0 && (
-                    <span className="pill">
-                      RECOMMENDED
-                    </span>
-                  )}
-                </td>
-
-                <td>
-                  <strong className="score-number">
-                    {x.r.thermalScore.toFixed(1)}
-                  </strong>
-                  <span className="score-denom">/100</span>
-                </td>
-
-                <td>
-                  {x.r.comfort.toFixed(1)}
-                </td>
-
-                <td>
-                  {x.r.min.toFixed(1)}°C
-                </td>
-
-                <td>
-                  {x.r.solar.toFixed(1)} kWh
-                </td>
-
-                <td>
-                  {x.r.heatLoss.toFixed(1)} kWh
-                </td>
-
-              </tr>
-            ))}
-
-          </tbody>
-
-        </table>
-
-      </div>
-
-      <div className="compare-explanation">
-
+      <div className="compare-title-row">
         <div>
-          <div className="eyebrow">ENGINEERING INTERPRETATION</div>
-
-          <h2>
-            {MATERIALS[best.id].name} leads the evaluated set.
-          </h2>
-
-          <p>
-            The configuration achieves the highest thermal-performance score
-            among the tested material combinations while maintaining the same
-            shelter geometry and climate conditions.
+          <h1>Compare configurations.</h1>
+          <p className="lede">
+            The summary model evaluates each existing material assembly with the same climate, geometry,
+            openings, orientation, target, duration and timestep.
           </p>
         </div>
+        <button className="primary" onClick={onEvaluate} disabled={isLoading}>
+          {isLoading?'Evaluating candidates…':'Evaluate materials'}
+        </button>
+      </div>
 
-        <div className="compare-delta">
+      <CandidateEvaluationFeedback evaluation={evaluation}/>
 
-          <small>LEAD OVER #2</small>
-
-          <strong>
-            +{(best.r.thermalScore-second.r.thermalScore).toFixed(1)}
-          </strong>
-
-          <span>thermal score points</span>
-
+      {ranked.length>0&&<>
+        <div className="compare-summary">
+          <div className="compare-summary-card">
+            <small>CLOSEST AVG TEMPERATURE TO TARGET</small>
+            <strong>{closest.label}</strong>
+            <span>Absolute gap: {closest.targetDeviationC.toFixed(2)}°C</span>
+          </div>
+          <div className="compare-summary-card">
+            <small>USER TARGET INDOOR TEMPERATURE</small>
+            <strong>{s.target.toFixed(1)}°C</strong>
+            <span>Shared target for every candidate</span>
+          </div>
+          <div className="compare-summary-card">
+            <small>MODEL PREDICTIONS RETURNED</small>
+            <strong>{ranked.length} / {evaluation.rows.length}</strong>
+            <span>Six summary outputs per successful candidate</span>
+          </div>
         </div>
 
-      </div>
+        <V3CandidateResultsTable
+          rows={evaluation.rows}
+          targetTemperatureC={s.target}
+          onApplyCandidate={onApplyCandidate}
+        />
 
-      <div className="note">
-        <b>Model note:</b> the thermal score is a transparent prototype
-        decision indicator. It is not an ANSYS validation score and should
-        not be treated as certified engineering performance.
-      </div>
+        <div className="compare-explanation">
+          <div>
+            <div className="eyebrow">COMPARISON METRIC</div>
+            <h2>{closest.label} is closest to the target on predicted average indoor temperature.</h2>
+            <p>
+              Candidates are ordered by |predicted average indoor temperature − target indoor
+              temperature|. This describes closeness among the evaluated options; it does not rank
+              solar input, heat transfer rate, or thermal energy loss as inherently better or worse.
+            </p>
+          </div>
+          <div className="compare-delta">
+            <small>ABSOLUTE TARGET GAP</small>
+            <strong>{closest.targetDeviationC.toFixed(2)}°C</strong>
+            <span>lower means closer to the target</span>
+          </div>
+        </div>
+      </>}
 
+      {evaluation.status==='idle'&&<div className="note">
+        Evaluate the current design's material assemblies with the case-summary model.
+        It returns case-level summaries, not an hourly temperature curve.
+      </div>}
+
+      <div className="note v3-comparison-note">
+        <b>Model diagnostics:</b> candidates outside observed numeric training ranges are still
+        predicted and identified in their row. Extrapolation may reduce reliability.
+      </div>
+      <WorkflowActions nextLabel="Continue to Optimize" onNext={onContinue}/>
     </main>
   );
 }
 
-function Optimize({ranking,best,setPage}) {
-
-  const improvement =
-    ranking.length > 1
-      ? best.r.thermalScore - ranking[ranking.length-1].r.thermalScore
-      : 0;
+function Optimize({s,evaluation,onEvaluate,onApplyCandidate,onOpenHourlySimulation,onBackToCompare,onContinueToSimulation}) {
+  const ranked=rankV3CandidatesByTarget(evaluation.rows,s.target);
+  const closest=ranked[0];
+  const isLoading=evaluation.status==='loading';
 
   return (
     <main className="section optimize-page">
-
+      <PageBackLink label="Back to Compare" onClick={onBackToCompare}/>
       <div className="eyebrow">OPTIMIZE</div>
-
-      <h1>Find the best shelter.</h1>
-
-      <p className="lede">
-        The optimization engine evaluates candidate material configurations
-        under the same climate and geometry, then ranks them by thermal
-        performance.
-      </p>
-
-      <div className="optimization-hero">
-
+      <div className="compare-title-row">
         <div>
-
-          <div className="eyebrow">
-            RECOMMENDED WITHIN EVALUATED SET
-          </div>
-
-          <h2>
-            {MATERIALS[best.id].name}
-            {' + Insulation + Concrete'}
-          </h2>
-
-          <p>
-            Highest thermal-performance score from the evaluated candidate
-            configurations.
+          <h1>Screen the design space.</h1>
+          <p className="lede">
+            Screen material, wall-thickness, shelter-size, orientation, window, and door combinations
+            through the case-summary model. The balanced screen targets 36 cases; climate and target stay fixed.
           </p>
-
-          <div className="optimization-actions">
-
-            <button
-              className="primary"
-              onClick={()=>setPage('design')}
-            >
-              Open recommended design →
-            </button>
-
-            <button
-              className="ghost light"
-              onClick={()=>setPage('simulate')}
-            >
-              View simulation
-            </button>
-
-          </div>
-
         </div>
-
-        <div className="optimization-score">
-
-          <strong>
-            {best.r.thermalScore.toFixed(1)}
-          </strong>
-
-          <span>/100</span>
-
-          <small>THERMAL PERFORMANCE</small>
-
-        </div>
-
+        <button className="primary" onClick={onEvaluate} disabled={isLoading}>
+          {isLoading?'Screening candidates…':'Evaluate candidates'}
+        </button>
       </div>
 
-      <div className="optimization-stats">
+      <CandidateEvaluationFeedback evaluation={evaluation}/>
 
+      <div className={`optimization-hero${closest?'':' empty'}`}>
         <div>
-          <small>TOP DESIGN</small>
-          <strong>{MATERIALS[best.id].name}</strong>
+          <div className="eyebrow">CLOSEST TO TARGET IN THIS SCREENED SET</div>
+          {closest?<>
+            <h2>{closest.searchFactors?.material
+              ? `${closest.searchFactors.material} + Insulation + Concrete`
+              : (closest.label?.split(' · ')[0]||closest.label)}</h2>
+            <p>
+              Predicted average indoor temperature: {closest.prediction.predictions.Average_Air_Temperature_C.toFixed(2)}°C.
+              User target: {s.target.toFixed(1)}°C. Absolute gap: {closest.targetDeviationC.toFixed(2)}°C.
+            </p>
+            <div className="optimization-actions">
+              <button className="primary" onClick={()=>onApplyCandidate(closest)}>Open this design →</button>
+              <button className="ghost light" onClick={onOpenHourlySimulation}>Run 24-hour model prediction</button>
+            </div>
+          </>:<p>Run the search to compare model predictions across the bounded candidate set.</p>}
         </div>
-
-        <div>
-          <small>THERMAL SCORE</small>
-          <strong>{best.r.thermalScore.toFixed(1)}</strong>
-        </div>
-
-        <div>
-          <small>HEAT LOSS</small>
-          <strong>{best.r.heatLoss.toFixed(1)} kWh</strong>
-        </div>
-
-        <div>
-          <small>SOLAR GAIN</small>
-          <strong>{best.r.solar.toFixed(1)} kWh</strong>
-        </div>
-
+        {closest&&<div className="optimization-score">
+          <strong>{closest?closest.targetDeviationC.toFixed(2):'—'}</strong>
+          <span>°C</span>
+          <small>ABSOLUTE TARGET GAP</small>
+        </div>}
       </div>
+
+      {closest&&<div className="optimization-stats">
+        <div><small>AVERAGE INDOOR</small><strong>{closest.prediction.predictions.Average_Air_Temperature_C.toFixed(2)}°C</strong></div>
+        <div><small>TARGET INDOOR</small><strong>{s.target.toFixed(1)}°C</strong></div>
+        <div><small>MIN / MAX INDOOR</small><strong>{closest.prediction.predictions.Minimum_Air_Temperature_C.toFixed(2)} / {closest.prediction.predictions.Maximum_Air_Temperature_C.toFixed(2)}°C</strong></div>
+        <div><small>ENERGY LOSS · 24 H CASE</small><strong>{closest.prediction.predictions.Thermal_Energy_Loss_Wh.toLocaleString(undefined,{maximumFractionDigits:2})} Wh</strong></div>
+      </div>}
 
       <div className="ranking optimization-ranking">
-
         <div className="ranking-header">
           <div>
-            <div className="eyebrow">CANDIDATE SEARCH</div>
-            <h2>Performance ranking.</h2>
+            <div className="eyebrow">CANDIDATE SCREEN</div>
+            <h2>Ranked by target-temperature gap.</h2>
           </div>
-
-          <span>
-            {ranking.length} configurations evaluated
-          </span>
+            <span>{ranked.length} predictions · {evaluation.rows.length} candidates</span>
         </div>
-
-        {ranking.map((x,i)=>(
-          <div
-            className={`rankrow ${i===0 ? 'rankrow-best' : ''}`}
-            key={x.id}
-          >
-
-            <b>#{i+1}</b>
-
-            <div className="rank-design">
-
-              <strong>
-                {MATERIALS[x.id].name}
-              </strong>
-
-              <span>
-                Insulation + Concrete
-              </span>
-
-            </div>
-
-            <strong className="rank-score">
-              {x.r.thermalScore.toFixed(1)}
-            </strong>
-
-            <div className="rankbar">
-              <i
-                style={{
-                  width:`${x.r.thermalScore}%`
-                }}
-              ></i>
-            </div>
-
-          </div>
-        ))}
-
+        {evaluation.rows.length>0&&<V3CandidateResultsTable
+          rows={evaluation.rows}
+          targetTemperatureC={s.target}
+          onApplyCandidate={onApplyCandidate}
+        />}
       </div>
 
-      <div className="optimization-insight">
-
-        <div className="eyebrow">OPTIMIZATION INSIGHT</div>
-
-        <h2>
-          The best configuration improves the score by {improvement.toFixed(1)}
-          {' '}points over the lowest-ranked candidate.
-        </h2>
-
+      {closest&&<div className="optimization-insight">
+        <div className="eyebrow">OPTIMIZATION METRIC</div>
+        <h2>Lower average-temperature gap means closer to the target.</h2>
         <p>
-          The ranking is generated from the current prototype thermal model.
-          In the full engineering workflow, the same candidate search can be
-          driven by validated ANSYS simulation outputs.
+          Ranking formula: |predicted average indoor temperature − target indoor temperature|, in °C.
+          Other outputs remain visible for engineering comparison but are not weighted into this
+          ranking. This identifies the closest option in the screened set; it is not a claim of
+          objectively best engineering performance.
         </p>
+      </div>}
 
+      <div className="note optimization-search-method">
+        <b>Search method:</b> six existing primary materials × three wall-thickness levels (Q1,
+        median, Q3 from the existing training inputs), with up to two geometry/orientation profiles
+        per material and thickness pair. The profile set uses the current geometry when it is within
+        range, plus quartile profiles for shelter dimensions and openings; it covers the existing
+        orientations across the search where the opening and wall-face checks permit. Wall thickness
+        levels scale the current layer proportions. Climate and target inputs stay fixed.
+        Candidates outside any recorded numeric or category range, plus openings larger than a
+        wall face, are omitted. Ranking uses only |predicted average indoor temperature − target|; this is
+        a bounded model screen, not a global or engineering optimum. Each row is a case-level summary
+        estimate based on physics-informed labels; running this search does not start ANSYS for the
+        candidate designs.
       </div>
 
+      {evaluation.status==='idle'&&<div className="note">
+        No predictions are calculated until you run this design-space search.
+      </div>}
+      <WorkflowActions nextLabel="Continue to Engineering Simulation" onNext={onContinueToSimulation}/>
     </main>
   );
 }
-function Ansys({r}) {
+
+function v3OutputRows(prediction) {
+  const duration=prediction?.input_summary?.Simulation_Duration_h;
+  const period=typeof duration==='number'&&Number.isFinite(duration)&&duration>0
+    ? `${duration} h case`
+    : 'modeled case';
+  return [
+  ['Average Indoor Temperature', 'Average_Air_Temperature_C', '°C'],
+  ['Minimum Indoor Temperature', 'Minimum_Air_Temperature_C', '°C'],
+  ['Maximum Indoor Temperature', 'Maximum_Air_Temperature_C', '°C'],
+  ['Solar Heat Input Rate', 'Solar_Heat_Input_W', 'W'],
+  ['Case Heat Transfer Rate', 'Heat_Transfer_Rate_W', 'W'],
+  [`Thermal Energy Loss · ${period}`, 'Thermal_Energy_Loss_Wh', 'Wh'],
+  ];
+}
+
+function V3PredictionGrid({prediction}) {
+  if (!prediction?.predictions) return null;
+
   return (
-    <main className="section">
+    <div className="v3-prediction-grid">
+      {v3OutputRows(prediction).map(([label,key,unit])=>{
+        const value=prediction.predictions[key];
+        return (
+          <div className="v3-prediction-value" key={key}>
+            <small>{label}</small>
+            <strong>{typeof value==='number'&&Number.isFinite(value)
+              ? `${value.toLocaleString(undefined,{maximumFractionDigits:2})} ${unit}`
+              : '—'}</strong>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
-      <div className="eyebrow"> ENGINEERING SIMULATION</div>
+function ModelDiagnostics({prediction,diagnostics}) {
+  const outOfRange=diagnostics?.numericOutOfRange||[];
+  const warnings=prediction?.warnings||[];
+  if (!outOfRange.length&&!warnings.length) return null;
 
-      <h1>ANSYS thermal simulation.</h1>
+  return (
+    <div className="v3-model-diagnostics" role="status">
+      <strong>Model diagnostics</strong>
+      {outOfRange.length>0&&<>
+        <p>Some inputs are outside the observed V3 training range. A prediction was generated; reliability may be lower for those conditions.</p>
+        <ul>{outOfRange.map(({field,value,supportedRange})=>(
+          <li key={field}><b>{field}</b> = {String(value)} (observed range: {supportedRange})</li>
+        ))}</ul>
+      </>}
+      {warnings.length>0&&<ul>{warnings.map((warning,index)=><li key={`${index}-${warning}`}>{warning}</li>)}</ul>}
+    </div>
+  );
+}
 
+function Ansys({prediction,diagnostics,predictionError,onGoDesign}) {
+  return (
+    <main className="section engineering-page">
+        <div className="eyebrow">ENGINEERING EVIDENCE</div>
+      <h1>Engineering evidence.</h1>
       <p className="lede">
-        High-fidelity ANSYS Mechanical results provide the engineering validation
-        layer. The web model provides rapid decision support for exploring and
-        comparing shelter configurations.
+        THERMOSHELTER provides rapid web estimates through its V3 surrogate, trained on prepared physics-informed estimates reported as calibrated against three ANSYS Fluent cases. This page does not launch ANSYS or validate the current design inputs.
       </p>
 
-      <div className="ansys-grid">
+      <section className="panel engineering-section">
+        <div className="eyebrow">REPORTED MODEL-DEVELOPMENT CONTEXT</div>
+        <h2>From engineering inputs to a rapid estimate</h2>
+        <ol className="engineering-flow">
+          {[
+            'User-defined shelter, climate and material inputs',
+            'Parameterized ANSYS thermal model',
+            'High-fidelity thermal simulation',
+            'Thermal outputs and prepared engineering dataset',
+            'V3 surrogate model',
+            'Rapid web prediction',
+          ].map((step,index)=><li key={step}><span>{String(index+1).padStart(2,'0')}</span><b>{step}</b></li>)}
+        </ol>
+        <p className="engineering-footnote">This sequence describes the provenance reported for the prepared data; no attached ANSYS project or per-case mapping verifies these steps for each training row. The browser sends predictions to the existing FastAPI service and V3 model; it does not execute ANSYS.</p>
+      </section>
 
-        <div className="panel imagepanel">
-          <div className="eyebrow">TEMPERATURE DISTRIBUTION</div>
-
-          <img
-            src="\ansys\temperature.png"
-            alt="ANSYS Temperature Distribution"
-            className="ansys-result-image"
-          />
+      <section className="panel engineering-section">
+        <div className="eyebrow">THERMOSHELTER V3 RAPID WEB PREDICTION</div>
+        <h2>Case-level thermal summary</h2>
+        <p className="engineering-copy">V3 estimates six case-level outputs from 21 input features. It does not return a 24-hour temperature curve; the separate hourly model predicts indoor temperature only.</p>
+        {prediction
+          ? <>
+              <V3PredictionGrid prediction={prediction}/>
+              <ModelDiagnostics prediction={prediction} diagnostics={diagnostics}/>
+            </>
+          : <div className="engineering-empty" role={predictionError?'alert':'status'}>
+              {predictionError||'No V3 prediction is available for the current design yet. Run the V3 case estimate on the Design page to show its six outputs here.'}
+              <button className="ghost" onClick={onGoDesign}>Open Design</button>
+            </div>}
+        <div className="engineering-model-strip">
+          <div><small>MODEL VERSION</small><b>V3</b></div>
+          <div><small>INPUT FEATURES</small><b>21</b></div>
+          <div><small>OUTPUT PREDICTIONS</small><b>6 summary values</b></div>
         </div>
+      </section>
 
-        <div className="panel imagepanel">
-          <div className="eyebrow">TOTAL HEAT FLUX</div>
-
-          <img
-            src="\ansys\heat-flux.png"
-            alt="ANSYS Total Heat Flux"
-            className="ansys-result-image"
-          />
-        </div>
-
-      </div>
-
-      <div className="solverstrip">
-        <div>
-          <small>SOLVER</small>
-          <b>Transient Thermal · ANSYS Mechanical</b>
-        </div>
-
-        <div>
-          <small>WEB MODEL SCORE</small>
-          <b>{r.thermalScore.toFixed(1)}/100</b>
-        </div>
-
-        <div>
-          <small>VALIDATIONSTATUS</small>
-          <b>ANSYS RESULT INTEGRATED</b>
-        </div>
-      </div>
-
-      <div className="panel">
-        <div className="eyebrow">VALIDATION PATH</div>
-
-        <h2>ANSYS → thermal outputs → web prediction</h2>
-
-        <div className="flow">
-          <span>User inputs</span>
-          <b>→</b>
-          <span>ANSYS Thermal Simulation</span>
-          <b>→</b>
-          <span>Temperature + Heat Flux</span>
-          <b>→</b>
-          <span>Web Dashboard</span>
-        </div>
-      </div>
-
+      <section className="panel engineering-section">
+        <div className="eyebrow">MODEL DATA NOTE</div>
+        <p className="engineering-copy">The prepared V3 dataset contains physics-informed estimates calibrated against three ANSYS Fluent cases. The 6,500 training rows are not 6,500 independent ANSYS simulations or field validations.</p>
+      </section>
     </main>
   );
 }
 
-function Report({s,r,best}){return <main className="section"><div className="eyebrow">REPORT</div><h1>Engineering assessment.</h1><button className="primary" onClick={()=>window.print()}>Print / Save report</button><div className="report-card"><div className="report-title"><div><span>THERMOSHELTER</span><small>Thermal design assessment</small></div><strong>{r.thermalScore.toFixed(1)}<small>/100</small></strong></div><div className="report-grid"><div><span>Location</span><b>{CLIMATE[s.location].name}</b></div><div><span>Geometry</span><b>{s.geometry.length} × {s.geometry.width} × {s.geometry.height} m</b></div><div><span>Occupants</span><b>{s.occupants}</b></div><div><span>Orientation</span><b>{s.geometry.orientation}</b></div><div><span>Indoor min / avg / max</span><b>{r.min.toFixed(1)} / {r.avg.toFixed(1)} / {r.max.toFixed(1)}°C</b></div><div><span>Solar / heat loss</span><b>{r.solar.toFixed(1)} / {r.heatLoss.toFixed(1)} kWh</b></div></div><div className="report-reco"><span>RECOMMENDATION</span><b>{MATERIALS[best.id].name} Timber + Insulation + Concrete</b><p>Recommended within the evaluated candidate set. Final deployment should use validated climate data and ANSYS results.</p></div></div></main>}
+function Report({s,materials,prediction,predictionError,diagnostics,candidateEvaluation,designHistory,onGoDesign,onBackToSimulation}) {
+  const climate=CLIMATE[s.location]||CLIMATE.leh;
+  const externalTemperature=prediction?.input_summary?.External_Temperature_C
+    ?? getDisplayedOutdoorTemperatureForClimate(climate);
+  const materialConfiguration=s.layers.map((id)=>materials[id]?.name||id).join(' + ');
+  const closest=rankV3CandidatesByTarget(candidateEvaluation?.rows||[],s.target)[0];
+  const historicalSummary=latestHistoricalSummary(designHistory);
+  const historicalHourly=latestHistoricalHourly(designHistory);
+  const historicalOptimization=(designHistory?.optimization_runs||[]).find((record)=>record?.selected_candidate);
+  const historicalHourlyValues=historicalHourly?.prediction?.predicted_indoor_temperature_C||[];
+  const historicalHourlyMin=historicalHourlyValues.length?Math.min(...historicalHourlyValues):null;
+  const historicalHourlyMax=historicalHourlyValues.length?Math.max(...historicalHourlyValues):null;
+  const average=prediction?.predictions?.Average_Air_Temperature_C;
+  const targetGap=typeof average==='number'&&Number.isFinite(average)
+    ? Math.abs(average-s.target)
+    : null;
+
+  return (
+    <main className="section report-page">
+      <PageBackLink label="Back to Engineering Simulation" onClick={onBackToSimulation}/>
+      <div className="eyebrow">REPORT</div>
+      <div className="report-page-heading">
+        <div><h1>Thermal design assessment.</h1><p className="lede">Current design inputs, case-level estimates and saved historical results.</p></div>
+        <button className="primary report-print-button" onClick={()=>window.print()}>Print / Save Report</button>
+      </div>
+
+      <article className="report-card report-document">
+        <header className="report-title">
+          <div><span>THERMOSHELTER</span><small>Thermal Design Assessment</small></div>
+          <span className="report-version">CURRENT DESIGN CASE</span>
+        </header>
+
+        <section className="report-section">
+          <div className="eyebrow">DESIGN INPUT SUMMARY</div>
+          <div className="report-grid">
+            <div><span>Location</span><b>{climate.name}</b></div>
+            <div><span>V3 climate mode</span><b>Static reference profile</b></div>
+            <div><span>Shape representation</span><b>Rectangular cuboid</b></div>
+            <div><span>V3 external temperature · reference profile</span><b>{externalTemperature.toFixed(1)}°C</b></div>
+            <div><span>Shelter length</span><b>{s.geometry.length} m</b></div>
+            <div><span>Shelter width</span><b>{s.geometry.width} m</b></div>
+            <div><span>Shelter height</span><b>{s.geometry.height} m</b></div>
+            <div><span>Occupants · saved context, not a model input</span><b>{s.occupants}</b></div>
+            <div><span>Window area</span><b>{s.geometry.windowArea} m²</b></div>
+            <div><span>Door area</span><b>{s.geometry.doorArea} m²</b></div>
+            <div><span>Orientation</span><b>{s.geometry.orientation}</b></div>
+            <div><span>Target indoor temperature</span><b>{s.target.toFixed(1)}°C</b></div>
+            <div className="report-grid-wide"><span>Material configuration</span><b>{materialConfiguration}</b></div>
+          </div>
+        </section>
+
+        <section className="report-section">
+          <div className="eyebrow">CURRENT CASE-LEVEL PREDICTION</div>
+          {prediction
+            ? <>
+                <p className="engineering-copy report-method-note">
+                  V3 outputs are estimates from physics-informed labels; the project report documents calibration against three ANSYS Fluent cases, not field validation. Solar heat input is a rate in W, heat transfer is one case-level rate in W, and thermal energy loss covers the modeled duration shown below. No hourly heat-flow series is available.
+                </p>
+                <V3PredictionGrid prediction={prediction}/>
+                <div className="report-target-comparison">
+                  <div><small>TARGET INDOOR TEMPERATURE</small><strong>{s.target.toFixed(2)}°C</strong></div>
+                  <div><small>V3 PREDICTED AVERAGE INDOOR</small><strong>{typeof average==='number'?`${average.toFixed(2)}°C`:'—'}</strong></div>
+                  <div><small>ABSOLUTE TEMPERATURE GAP</small><strong>{targetGap===null?'—':`${targetGap.toFixed(2)}°C`}</strong></div>
+                </div>
+              </>
+            : <div className="engineering-empty report-empty" role={predictionError?'alert':'status'}>
+                {predictionError||'No V3 prediction is available for the current design. Run the V3 case estimate on the Design page before generating a results report.'}
+                <button className="ghost" onClick={onGoDesign}>Open Design</button>
+          </div>}
+        </section>
+
+        {historicalSummary&&<section className="report-section report-history-section">
+          <div className="eyebrow">SAVED HISTORICAL V3 RESULT</div>
+          <p className="engineering-copy">This is the latest stored summary prediction for the loaded design. It is historical and is not presented as a new calculation for the current session.</p>
+          <div className="report-history-meta">Saved {historicalSummary.created_at?new Date(historicalSummary.created_at).toLocaleString():'time unavailable'} · {historicalSummary.model_version}</div>
+          <V3PredictionGrid prediction={historicalSummary.prediction}/>
+          <ModelDiagnostics prediction={historicalSummary.prediction} diagnostics={historicalSummary.diagnostics}/>
+        </section>}
+
+        {historicalHourly&&<section className="report-section report-history-section">
+          <div className="eyebrow">SAVED HISTORICAL 24-HOUR RESULT</div>
+          <p className="engineering-copy">Stored V3 Hourly Surrogate output for the loaded design. It remains historical and does not replace a current calculation.</p>
+          <div className="report-history-meta">
+            Saved {historicalHourly.created_at?new Date(historicalHourly.created_at).toLocaleString():'time unavailable'}
+            {' · '}{historicalHourly.model_name||'V3 Hourly Surrogate'}
+            {(historicalHourly.weather_profile?.localDate)&&` · Forecast ${historicalHourly.weather_profile.localDate}`}
+          </div>
+          {historicalHourlyMin!==null&&<p className="engineering-copy">
+            Indoor temperature range: {historicalHourlyMin.toFixed(1)}–{historicalHourlyMax.toFixed(1)}°C.
+          </p>}
+          <div className="report-hourly-history" aria-label="Saved hourly indoor temperatures">
+            {historicalHourlyValues.map((temperature,hour)=><span key={hour}>
+              <small>{hour.toString().padStart(2,'0')}:00</small><b>{temperature.toFixed(1)}°C</b>
+            </span>)}
+          </div>
+        </section>}
+
+        {historicalOptimization&&<section className="report-section report-history-section">
+          <div className="eyebrow">SAVED HISTORICAL OPTIMIZATION SEARCH</div>
+          <p className="engineering-copy">Stored V3 surrogate search result for the loaded design; this does not represent a current run or an engineering optimum.</p>
+          <div className="report-reco">
+            <span>{historicalOptimization.candidate_count||0} CANDIDATES · V3 SCREEN</span>
+            <b>{historicalOptimization.selected_candidate.label||'Selected candidate'}</b>
+            {Number.isFinite(historicalOptimization.selected_candidate.target_deviation_C)&&<p>Absolute target gap: {historicalOptimization.selected_candidate.target_deviation_C.toFixed(2)}°C.</p>}
+            <small>Saved {historicalOptimization.created_at?new Date(historicalOptimization.created_at).toLocaleString():'time unavailable'}</small>
+          </div>
+          {historicalOptimization.selected_candidate.prediction&&<V3PredictionGrid prediction={historicalOptimization.selected_candidate.prediction}/>}
+        </section>}
+
+        {prediction&&<section className="report-section">
+          <div className="eyebrow">CANDIDATE EVALUATION</div>
+          {closest
+            ? <div className="report-reco">
+                <span>CLOSEST WITHIN THE EVALUATED CANDIDATE SET</span>
+                <b>{closest.label}</b>
+                <p>V3 average indoor temperature is {closest.prediction.predictions.Average_Air_Temperature_C.toFixed(2)}°C, with an absolute target gap of {closest.targetDeviationC.toFixed(2)}°C. Candidates use the same target-gap metric as Compare and Optimize.</p>
+              </div>
+            : <p className="engineering-copy">No Compare or Optimize candidate evaluation has been run for these current inputs.</p>}
+        </section>}
+
+        {prediction&&<section className="report-section"><ModelDiagnostics prediction={prediction} diagnostics={diagnostics}/></section>}
+
+        <section className="report-section report-provenance">
+          <div className="eyebrow">DATA AND MODEL PROVENANCE</div>
+          <p>The V3 model was trained using four full-feature datasets totaling 6,500 unique cases. The prepared datasets are labeled physics-informed estimates and were calibrated against three ANSYS Fluent cases. This does not mean all 6,500 cases were independently simulated in ANSYS. No field measurements were supplied in the verified V3 training report.</p>
+        </section>
+      </article>
+    </main>
+  );
+}
 
 createRoot(document.getElementById('root')).render(<App/>);

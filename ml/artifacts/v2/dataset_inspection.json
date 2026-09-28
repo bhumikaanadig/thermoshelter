@@ -1,0 +1,2716 @@
+{
+  "files": [
+    {
+      "filename": "ladakh_shelter_1500_batch3_physics_informed_dataset.csv",
+      "path": "D:\\ANSYS\\ladakh_shelter_1500_batch3_physics_informed_dataset.csv",
+      "rows": 1500,
+      "columns": 41,
+      "column_names": [
+        "Case_ID",
+        "Material",
+        "Material_Category",
+        "Thermal_Conductivity_W_mK",
+        "Density_kg_m3",
+        "Specific_Heat_J_kgK",
+        "Wall_Thickness_m",
+        "Shelter_Length_m",
+        "Shelter_Width_m",
+        "Shelter_Height_m",
+        "Opening_Area_m2",
+        "Window_Area_m2",
+        "Door_Area_m2",
+        "Orientation_deg",
+        "External_Temperature_C",
+        "Initial_Air_Temperature_C",
+        "Solar_Radiation_W_m2",
+        "Daily_Solar_Energy_kWh_m2",
+        "Wind_Speed_m_s",
+        "Relative_Humidity_percent",
+        "Simulation_Duration_h",
+        "Time_Step_min",
+        "Average_Air_Temperature_C",
+        "Minimum_Air_Temperature_C",
+        "Maximum_Air_Temperature_C",
+        "Average_Wall_Temperature_C",
+        "Minimum_Wall_Temperature_C",
+        "Maximum_Wall_Temperature_C",
+        "Heat_Transfer_Rate_W",
+        "Average_Heat_Flux_W_m2",
+        "Maximum_Heat_Flux_W_m2",
+        "Solar_Heat_Input_W",
+        "Total_Heat_Transferred_Wh",
+        "Indoor_Temperature_Rise_C",
+        "Thermal_Energy_Loss_Wh",
+        "Data_Type",
+        "CFD_Reference",
+        "Climate_Data_Source",
+        "Material_Data_Source",
+        "Surrogate_Method",
+        "Batch"
+      ],
+      "dtypes": {
+        "Case_ID": "str",
+        "Material": "str",
+        "Material_Category": "str",
+        "Thermal_Conductivity_W_mK": "float64",
+        "Density_kg_m3": "float64",
+        "Specific_Heat_J_kgK": "float64",
+        "Wall_Thickness_m": "float64",
+        "Shelter_Length_m": "float64",
+        "Shelter_Width_m": "float64",
+        "Shelter_Height_m": "float64",
+        "Opening_Area_m2": "float64",
+        "Window_Area_m2": "float64",
+        "Door_Area_m2": "float64",
+        "Orientation_deg": "int64",
+        "External_Temperature_C": "float64",
+        "Initial_Air_Temperature_C": "float64",
+        "Solar_Radiation_W_m2": "float64",
+        "Daily_Solar_Energy_kWh_m2": "float64",
+        "Wind_Speed_m_s": "float64",
+        "Relative_Humidity_percent": "float64",
+        "Simulation_Duration_h": "float64",
+        "Time_Step_min": "int64",
+        "Average_Air_Temperature_C": "float64",
+        "Minimum_Air_Temperature_C": "float64",
+        "Maximum_Air_Temperature_C": "float64",
+        "Average_Wall_Temperature_C": "float64",
+        "Minimum_Wall_Temperature_C": "float64",
+        "Maximum_Wall_Temperature_C": "float64",
+        "Heat_Transfer_Rate_W": "float64",
+        "Average_Heat_Flux_W_m2": "float64",
+        "Maximum_Heat_Flux_W_m2": "float64",
+        "Solar_Heat_Input_W": "float64",
+        "Total_Heat_Transferred_Wh": "float64",
+        "Indoor_Temperature_Rise_C": "float64",
+        "Thermal_Energy_Loss_Wh": "float64",
+        "Data_Type": "str",
+        "CFD_Reference": "str",
+        "Climate_Data_Source": "str",
+        "Material_Data_Source": "str",
+        "Surrogate_Method": "str",
+        "Batch": "str"
+      },
+      "missing_values": {
+        "Case_ID": 0,
+        "Material": 0,
+        "Material_Category": 0,
+        "Thermal_Conductivity_W_mK": 0,
+        "Density_kg_m3": 0,
+        "Specific_Heat_J_kgK": 0,
+        "Wall_Thickness_m": 0,
+        "Shelter_Length_m": 0,
+        "Shelter_Width_m": 0,
+        "Shelter_Height_m": 0,
+        "Opening_Area_m2": 0,
+        "Window_Area_m2": 0,
+        "Door_Area_m2": 0,
+        "Orientation_deg": 0,
+        "External_Temperature_C": 0,
+        "Initial_Air_Temperature_C": 0,
+        "Solar_Radiation_W_m2": 0,
+        "Daily_Solar_Energy_kWh_m2": 0,
+        "Wind_Speed_m_s": 0,
+        "Relative_Humidity_percent": 0,
+        "Simulation_Duration_h": 0,
+        "Time_Step_min": 0,
+        "Average_Air_Temperature_C": 0,
+        "Minimum_Air_Temperature_C": 0,
+        "Maximum_Air_Temperature_C": 0,
+        "Average_Wall_Temperature_C": 0,
+        "Minimum_Wall_Temperature_C": 0,
+        "Maximum_Wall_Temperature_C": 0,
+        "Heat_Transfer_Rate_W": 0,
+        "Average_Heat_Flux_W_m2": 0,
+        "Maximum_Heat_Flux_W_m2": 0,
+        "Solar_Heat_Input_W": 0,
+        "Total_Heat_Transferred_Wh": 0,
+        "Indoor_Temperature_Rise_C": 0,
+        "Thermal_Energy_Loss_Wh": 0,
+        "Data_Type": 0,
+        "CFD_Reference": 0,
+        "Climate_Data_Source": 0,
+        "Material_Data_Source": 0,
+        "Surrogate_Method": 0,
+        "Batch": 0
+      },
+      "duplicate_rows": 0,
+      "duplicate_case_ids": 0,
+      "unique_case_ids": 1500,
+      "unique_materials": [
+        "Aerated concrete / AAC",
+        "Aluminum",
+        "Brick",
+        "Composite insulated wall",
+        "Concrete",
+        "EPS insulation",
+        "Polyurethane foam (PU)",
+        "Rock wool / mineral wool",
+        "Wood / timber"
+      ],
+      "inputs_present": [
+        "Material",
+        "Material_Category",
+        "Thermal_Conductivity_W_mK",
+        "Density_kg_m3",
+        "Specific_Heat_J_kgK",
+        "Wall_Thickness_m",
+        "Shelter_Length_m",
+        "Shelter_Width_m",
+        "Shelter_Height_m",
+        "Opening_Area_m2",
+        "Window_Area_m2",
+        "Door_Area_m2",
+        "Orientation_deg",
+        "External_Temperature_C",
+        "Initial_Air_Temperature_C",
+        "Solar_Radiation_W_m2",
+        "Daily_Solar_Energy_kWh_m2",
+        "Wind_Speed_m_s",
+        "Relative_Humidity_percent",
+        "Simulation_Duration_h",
+        "Time_Step_min"
+      ],
+      "targets_present": [
+        "Average_Air_Temperature_C",
+        "Minimum_Air_Temperature_C",
+        "Maximum_Air_Temperature_C",
+        "Solar_Heat_Input_W",
+        "Heat_Transfer_Rate_W",
+        "Thermal_Energy_Loss_Wh",
+        "Average_Wall_Temperature_C",
+        "Average_Heat_Flux_W_m2",
+        "Maximum_Heat_Flux_W_m2",
+        "Total_Heat_Transferred_Wh",
+        "Indoor_Temperature_Rise_C"
+      ],
+      "other_columns": [
+        "Case_ID",
+        "Minimum_Wall_Temperature_C",
+        "Maximum_Wall_Temperature_C",
+        "Data_Type",
+        "CFD_Reference",
+        "Climate_Data_Source",
+        "Material_Data_Source",
+        "Surrogate_Method",
+        "Batch"
+      ],
+      "missing_expected_features": [],
+      "missing_expected_targets": [],
+      "provenance": {
+        "Data_Type": [
+          "PHYSICS_INFORMED_ESTIMATE"
+        ],
+        "CFD_Reference": [
+          "Calibrated against 3 ANSYS Fluent validation cases (Aluminum/Concrete/EPS, 0.20 m, Text=35C, Tinit=20C)"
+        ],
+        "Climate_Data_Source": [
+          "Representative high-altitude cold-desert climate ranges for Ladakh (not a direct NASA POWER data pull)"
+        ],
+        "Material_Data_Source": [
+          "Standard engineering material-property handbook ranges"
+        ],
+        "Surrogate_Method": [
+          "Physics-informed R=L/k+R_film network, log(k)-interpolated correction anchored to 3 Fluent points"
+        ],
+        "Batch": [
+          "Batch_3"
+        ]
+      },
+      "constant_columns": [
+        "Data_Type",
+        "CFD_Reference",
+        "Climate_Data_Source",
+        "Material_Data_Source",
+        "Surrogate_Method",
+        "Batch"
+      ],
+      "highly_correlated_numeric_feature_pairs_abs_r_ge_0_98": [
+        {
+          "left": "Solar_Radiation_W_m2",
+          "right": "Daily_Solar_Energy_kWh_m2",
+          "pearson_r": 0.9999999818674329
+        },
+        {
+          "left": "Opening_Area_m2",
+          "right": "Window_Area_m2",
+          "pearson_r": 0.9889316597938163
+        }
+      ],
+      "physical_checks": [
+        {
+          "check": "Thermal_Conductivity_W_mK > 0",
+          "violations": 0,
+          "interpretation": "Flag only; review against the source model and units."
+        },
+        {
+          "check": "Density_kg_m3 > 0",
+          "violations": 0,
+          "interpretation": "Flag only; review against the source model and units."
+        },
+        {
+          "check": "Specific_Heat_J_kgK > 0",
+          "violations": 0,
+          "interpretation": "Flag only; review against the source model and units."
+        },
+        {
+          "check": "Wall_Thickness_m > 0",
+          "violations": 0,
+          "interpretation": "Flag only; review against the source model and units."
+        },
+        {
+          "check": "Shelter_Length_m > 0",
+          "violations": 0,
+          "interpretation": "Flag only; review against the source model and units."
+        },
+        {
+          "check": "Shelter_Width_m > 0",
+          "violations": 0,
+          "interpretation": "Flag only; review against the source model and units."
+        },
+        {
+          "check": "Shelter_Height_m > 0",
+          "violations": 0,
+          "interpretation": "Flag only; review against the source model and units."
+        },
+        {
+          "check": "Simulation_Duration_h > 0",
+          "violations": 0,
+          "interpretation": "Flag only; review against the source model and units."
+        },
+        {
+          "check": "Time_Step_min > 0",
+          "violations": 0,
+          "interpretation": "Flag only; review against the source model and units."
+        },
+        {
+          "check": "Opening_Area_m2 >= 0",
+          "violations": 0,
+          "interpretation": "Flag only; signed heat-flow rate is allowed and is not checked here."
+        },
+        {
+          "check": "Window_Area_m2 >= 0",
+          "violations": 0,
+          "interpretation": "Flag only; signed heat-flow rate is allowed and is not checked here."
+        },
+        {
+          "check": "Door_Area_m2 >= 0",
+          "violations": 0,
+          "interpretation": "Flag only; signed heat-flow rate is allowed and is not checked here."
+        },
+        {
+          "check": "Solar_Radiation_W_m2 >= 0",
+          "violations": 0,
+          "interpretation": "Flag only; signed heat-flow rate is allowed and is not checked here."
+        },
+        {
+          "check": "Daily_Solar_Energy_kWh_m2 >= 0",
+          "violations": 0,
+          "interpretation": "Flag only; signed heat-flow rate is allowed and is not checked here."
+        },
+        {
+          "check": "Wind_Speed_m_s >= 0",
+          "violations": 0,
+          "interpretation": "Flag only; signed heat-flow rate is allowed and is not checked here."
+        },
+        {
+          "check": "Solar_Heat_Input_W >= 0",
+          "violations": 0,
+          "interpretation": "Flag only; signed heat-flow rate is allowed and is not checked here."
+        },
+        {
+          "check": "Thermal_Energy_Loss_Wh >= 0",
+          "violations": 0,
+          "interpretation": "Flag only; signed heat-flow rate is allowed and is not checked here."
+        },
+        {
+          "check": "Relative_Humidity_percent in [0, 100]",
+          "violations": 0,
+          "interpretation": "Outside conventional percentage bounds."
+        },
+        {
+          "check": "Orientation_deg in [0, 360]",
+          "violations": 0,
+          "interpretation": "Outside the stated compass-angle range."
+        },
+        {
+          "check": "minimum <= average <= maximum air temperature",
+          "violations": 0,
+          "interpretation": "Checks internal consistency of temperature summaries."
+        },
+        {
+          "check": "opening area equals window area + door area",
+          "violations": 0,
+          "interpretation": "Potential deterministic relationship/redundant inputs; values retained."
+        }
+      ],
+      "columns_detail": [
+        {
+          "column": "Case_ID",
+          "dtype": "str",
+          "missing": 0,
+          "unique": 1500,
+          "value_counts": "omitted for high-cardinality column (1500 unique values)"
+        },
+        {
+          "column": "Material",
+          "dtype": "str",
+          "missing": 0,
+          "unique": 9,
+          "value_counts": {
+            "Aerated concrete / AAC": 180,
+            "Wood / timber": 180,
+            "Polyurethane foam (PU)": 180,
+            "Brick": 180,
+            "Rock wool / mineral wool": 180,
+            "Composite insulated wall": 180,
+            "Aluminum": 140,
+            "EPS insulation": 140,
+            "Concrete": 140
+          }
+        },
+        {
+          "column": "Material_Category",
+          "dtype": "str",
+          "missing": 0,
+          "unique": 5,
+          "value_counts": {
+            "Masonry": 500,
+            "Insulation": 500,
+            "Timber": 180,
+            "Composite": 180,
+            "Metal": 140
+          }
+        },
+        {
+          "column": "Thermal_Conductivity_W_mK",
+          "dtype": "float64",
+          "missing": 0,
+          "unique": 1181,
+          "nonfinite": 0,
+          "min": 0.0201,
+          "q1": 0.0431,
+          "median": 0.12890000000000001,
+          "q3": 0.754125,
+          "max": 219.9915,
+          "iqr_outliers": 170
+        },
+        {
+          "column": "Density_kg_m3",
+          "dtype": "float64",
+          "missing": 0,
+          "unique": 1181,
+          "nonfinite": 0,
+          "min": 15.1,
+          "q1": 49.175000000000004,
+          "median": 547.95,
+          "q3": 1810.6,
+          "max": 2700.0,
+          "iqr_outliers": 0
+        },
+        {
+          "column": "Specific_Heat_J_kgK",
+          "dtype": "float64",
+          "missing": 0,
+          "unique": 1294,
+          "nonfinite": 0,
+          "min": 800.2,
+          "q1": 896.0,
+          "median": 971.75,
+          "q3": 1406.1499999999999,
+          "max": 2496.7,
+          "iqr_outliers": 43
+        },
+        {
+          "column": "Wall_Thickness_m",
+          "dtype": "float64",
+          "missing": 0,
+          "unique": 351,
+          "nonfinite": 0,
+          "min": 0.05,
+          "q1": 0.13775,
+          "median": 0.225,
+          "q3": 0.31225,
+          "max": 0.4,
+          "iqr_outliers": 0
+        },
+        {
+          "column": "Shelter_Length_m",
+          "dtype": "float64",
+          "missing": 0,
+          "unique": 301,
+          "nonfinite": 0,
+          "min": 3.0,
+          "q1": 3.75,
+          "median": 4.5,
+          "q3": 5.25,
+          "max": 6.0,
+          "iqr_outliers": 0
+        },
+        {
+          "column": "Shelter_Width_m",
+          "dtype": "float64",
+          "missing": 0,
+          "unique": 251,
+          "nonfinite": 0,
+          "min": 2.5,
+          "q1": 3.1275,
+          "median": 3.75,
+          "q3": 4.3725000000000005,
+          "max": 5.0,
+          "iqr_outliers": 0
+        },
+        {
+          "column": "Shelter_Height_m",
+          "dtype": "float64",
+          "missing": 0,
+          "unique": 131,
+          "nonfinite": 0,
+          "min": 2.2,
+          "q1": 2.5275,
+          "median": 2.85,
+          "q3": 3.1725,
+          "max": 3.5,
+          "iqr_outliers": 0
+        },
+        {
+          "column": "Opening_Area_m2",
+          "dtype": "float64",
+          "missing": 0,
+          "unique": 821,
+          "nonfinite": 0,
+          "min": 1.55,
+          "q1": 4.577500000000001,
+          "median": 6.71,
+          "q3": 9.0825,
+          "max": 16.47,
+          "iqr_outliers": 2
+        },
+        {
+          "column": "Window_Area_m2",
+          "dtype": "float64",
+          "missing": 0,
+          "unique": 806,
+          "nonfinite": 0,
+          "min": 0.0,
+          "q1": 2.3075,
+          "median": 4.495,
+          "q3": 6.84,
+          "max": 14.19,
+          "iqr_outliers": 1
+        },
+        {
+          "column": "Door_Area_m2",
+          "dtype": "float64",
+          "missing": 0,
+          "unique": 151,
+          "nonfinite": 0,
+          "min": 1.5,
+          "q1": 1.8775,
+          "median": 2.25,
+          "q3": 2.6225,
+          "max": 3.0,
+          "iqr_outliers": 0
+        },
+        {
+          "column": "Orientation_deg",
+          "dtype": "int64",
+          "missing": 0,
+          "unique": 8,
+          "nonfinite": 0,
+          "min": 0.0,
+          "q1": 78.75,
+          "median": 157.5,
+          "q3": 236.25,
+          "max": 315.0,
+          "iqr_outliers": 0
+        },
+        {
+          "column": "External_Temperature_C",
+          "dtype": "float64",
+          "missing": 0,
+          "unique": 1468,
+          "nonfinite": 0,
+          "min": -20.0,
+          "q1": -7.6875,
+          "median": 4.99,
+          "q3": 19.744999999999997,
+          "max": 39.94,
+          "iqr_outliers": 0
+        },
+        {
+          "column": "Initial_Air_Temperature_C",
+          "dtype": "float64",
+          "missing": 0,
+          "unique": 1360,
+          "nonfinite": 0,
+          "min": 5.01,
+          "q1": 10.0,
+          "median": 15.004999999999999,
+          "q3": 20.0025,
+          "max": 24.99,
+          "iqr_outliers": 0
+        },
+        {
+          "column": "Solar_Radiation_W_m2",
+          "dtype": "float64",
+          "missing": 0,
+          "unique": 1492,
+          "nonfinite": 0,
+          "min": 334.0,
+          "q1": 583.7,
+          "median": 833.3,
+          "q3": 1082.95,
+          "max": 1333.0,
+          "iqr_outliers": 0
+        },
+        {
+          "column": "Daily_Solar_Energy_kWh_m2",
+          "dtype": "float64",
+          "missing": 0,
+          "unique": 1472,
+          "nonfinite": 0,
+          "min": 2.004,
+          "q1": 3.5020000000000002,
+          "median": 5.0,
+          "q3": 6.498,
+          "max": 7.998,
+          "iqr_outliers": 0
+        },
+        {
+          "column": "Wind_Speed_m_s",
+          "dtype": "float64",
+          "missing": 0,
+          "unique": 1108,
+          "nonfinite": 0,
+          "min": 0.0,
+          "q1": 3.0075,
+          "median": 5.995,
+          "q3": 9.0,
+          "max": 12.0,
+          "iqr_outliers": 0
+        },
+        {
+          "column": "Relative_Humidity_percent",
+          "dtype": "float64",
+          "missing": 0,
+          "unique": 701,
+          "nonfinite": 0,
+          "min": 10.0,
+          "q1": 27.5,
+          "median": 45.0,
+          "q3": 62.5,
+          "max": 80.0,
+          "iqr_outliers": 0
+        },
+        {
+          "column": "Simulation_Duration_h",
+          "dtype": "float64",
+          "missing": 0,
+          "unique": 421,
+          "nonfinite": 0,
+          "min": 6.0,
+          "q1": 16.5,
+          "median": 27.0,
+          "q3": 37.5,
+          "max": 48.0,
+          "iqr_outliers": 0
+        },
+        {
+          "column": "Time_Step_min",
+          "dtype": "int64",
+          "missing": 0,
+          "unique": 6,
+          "nonfinite": 0,
+          "min": 1.0,
+          "q1": 2.0,
+          "median": 5.0,
+          "q3": 15.0,
+          "max": 30.0,
+          "iqr_outliers": 0
+        },
+        {
+          "column": "Average_Air_Temperature_C",
+          "dtype": "float64",
+          "missing": 0,
+          "unique": 1467,
+          "nonfinite": 0,
+          "min": -7.959,
+          "q1": 3.8200000000000003,
+          "median": 10.1415,
+          "q3": 17.4455,
+          "max": 31.481,
+          "iqr_outliers": 0
+        },
+        {
+          "column": "Minimum_Air_Temperature_C",
+          "dtype": "float64",
+          "missing": 0,
+          "unique": 1207,
+          "nonfinite": 0,
+          "min": -9.35,
+          "q1": 2.8025,
+          "median": 9.245,
+          "q3": 16.655,
+          "max": 30.79,
+          "iqr_outliers": 0
+        },
+        {
+          "column": "Maximum_Air_Temperature_C",
+          "dtype": "float64",
+          "missing": 0,
+          "unique": 1222,
+          "nonfinite": 0,
+          "min": -5.87,
+          "q1": 4.89,
+          "median": 11.47,
+          "q3": 18.7,
+          "max": 33.5,
+          "iqr_outliers": 0
+        },
+        {
+          "column": "Average_Wall_Temperature_C",
+          "dtype": "float64",
+          "missing": 0,
+          "unique": 1481,
+          "nonfinite": 0,
+          "min": -19.689,
+          "q1": -4.87525,
+          "median": 5.9795,
+          "q3": 19.17425,
+          "max": 39.728,
+          "iqr_outliers": 0
+        },
+        {
+          "column": "Minimum_Wall_Temperature_C",
+          "dtype": "float64",
+          "missing": 0,
+          "unique": 1320,
+          "nonfinite": 0,
+          "min": -22.01,
+          "q1": -6.15,
+          "median": 4.6850000000000005,
+          "q3": 18.035,
+          "max": 37.62,
+          "iqr_outliers": 0
+        },
+        {
+          "column": "Maximum_Wall_Temperature_C",
+          "dtype": "float64",
+          "missing": 0,
+          "unique": 1304,
+          "nonfinite": 0,
+          "min": -16.23,
+          "q1": -3.0575,
+          "median": 8.024999999999999,
+          "q3": 20.7775,
+          "max": 43.21,
+          "iqr_outliers": 0
+        },
+        {
+          "column": "Heat_Transfer_Rate_W",
+          "dtype": "float64",
+          "missing": 0,
+          "unique": 1500,
+          "nonfinite": 0,
+          "min": -885.7904,
+          "q1": -209.65245,
+          "median": -66.9785,
+          "q3": 32.153525,
+          "max": 782.7685,
+          "iqr_outliers": 67
+        },
+        {
+          "column": "Average_Heat_Flux_W_m2",
+          "dtype": "float64",
+          "missing": 0,
+          "unique": 1420,
+          "nonfinite": 0,
+          "min": -13.491,
+          "q1": -3.6639999999999997,
+          "median": -1.1564999999999999,
+          "q3": 0.577,
+          "max": 11.192,
+          "iqr_outliers": 63
+        },
+        {
+          "column": "Maximum_Heat_Flux_W_m2",
+          "dtype": "float64",
+          "missing": 0,
+          "unique": 1426,
+          "nonfinite": 0,
+          "min": -15.515,
+          "q1": -4.2139999999999995,
+          "median": -1.33,
+          "q3": 0.66325,
+          "max": 12.871,
+          "iqr_outliers": 63
+        },
+        {
+          "column": "Solar_Heat_Input_W",
+          "dtype": "float64",
+          "missing": 0,
+          "unique": 1500,
+          "nonfinite": 0,
+          "min": 437.57,
+          "q1": 3583.1625,
+          "median": 9548.150000000001,
+          "q3": 18761.25,
+          "max": 56979.57,
+          "iqr_outliers": 19
+        },
+        {
+          "column": "Total_Heat_Transferred_Wh",
+          "dtype": "float64",
+          "missing": 0,
+          "unique": 1494,
+          "nonfinite": 0,
+          "min": -40519.1,
+          "q1": -4801.3,
+          "median": -1368.4,
+          "q3": 630.4499999999999,
+          "max": 22157.9,
+          "iqr_outliers": 157
+        },
+        {
+          "column": "Indoor_Temperature_Rise_C",
+          "dtype": "float64",
+          "missing": 0,
+          "unique": 1193,
+          "nonfinite": 0,
+          "min": -23.59,
+          "q1": -11.34,
+          "median": -4.9350000000000005,
+          "q3": 2.2175000000000002,
+          "max": 18.41,
+          "iqr_outliers": 0
+        },
+        {
+          "column": "Thermal_Energy_Loss_Wh",
+          "dtype": "float64",
+          "missing": 0,
+          "unique": 1018,
+          "nonfinite": 0,
+          "min": 0.0,
+          "q1": 0.0,
+          "median": 1368.4,
+          "q3": 4801.3,
+          "max": 40519.1,
+          "iqr_outliers": 121
+        },
+        {
+          "column": "Data_Type",
+          "dtype": "str",
+          "missing": 0,
+          "unique": 1,
+          "value_counts": {
+            "PHYSICS_INFORMED_ESTIMATE": 1500
+          }
+        },
+        {
+          "column": "CFD_Reference",
+          "dtype": "str",
+          "missing": 0,
+          "unique": 1,
+          "value_counts": {
+            "Calibrated against 3 ANSYS Fluent validation cases (Aluminum/Concrete/EPS, 0.20 m, Text=35C, Tinit=20C)": 1500
+          }
+        },
+        {
+          "column": "Climate_Data_Source",
+          "dtype": "str",
+          "missing": 0,
+          "unique": 1,
+          "value_counts": {
+            "Representative high-altitude cold-desert climate ranges for Ladakh (not a direct NASA POWER data pull)": 1500
+          }
+        },
+        {
+          "column": "Material_Data_Source",
+          "dtype": "str",
+          "missing": 0,
+          "unique": 1,
+          "value_counts": {
+            "Standard engineering material-property handbook ranges": 1500
+          }
+        },
+        {
+          "column": "Surrogate_Method",
+          "dtype": "str",
+          "missing": 0,
+          "unique": 1,
+          "value_counts": {
+            "Physics-informed R=L/k+R_film network, log(k)-interpolated correction anchored to 3 Fluent points": 1500
+          }
+        },
+        {
+          "column": "Batch",
+          "dtype": "str",
+          "missing": 0,
+          "unique": 1,
+          "value_counts": {
+            "Batch_3": 1500
+          }
+        }
+      ]
+    },
+    {
+      "filename": "ladakh_shelter_ml_dataset_63_cases.csv",
+      "path": "D:\\ANSYS\\ladakh_shelter_ml_dataset_63_cases.csv",
+      "rows": 63,
+      "columns": 11,
+      "column_names": [
+        "Material",
+        "Wall_Thickness_m",
+        "External_Temperature_C",
+        "Initial_Air_Temperature_C",
+        "Solar_Radiation_kWh_m2_year",
+        "Wind_Speed_m_s",
+        "Average_Air_Temperature_C",
+        "Minimum_Air_Temperature_C",
+        "Maximum_Air_Temperature_C",
+        "Average_Wall_Temperature_C",
+        "Heat_Transfer_Rate_W"
+      ],
+      "dtypes": {
+        "Material": "str",
+        "Wall_Thickness_m": "float64",
+        "External_Temperature_C": "float64",
+        "Initial_Air_Temperature_C": "float64",
+        "Solar_Radiation_kWh_m2_year": "float64",
+        "Wind_Speed_m_s": "float64",
+        "Average_Air_Temperature_C": "float64",
+        "Minimum_Air_Temperature_C": "float64",
+        "Maximum_Air_Temperature_C": "float64",
+        "Average_Wall_Temperature_C": "float64",
+        "Heat_Transfer_Rate_W": "float64"
+      },
+      "missing_values": {
+        "Material": 0,
+        "Wall_Thickness_m": 0,
+        "External_Temperature_C": 0,
+        "Initial_Air_Temperature_C": 0,
+        "Solar_Radiation_kWh_m2_year": 0,
+        "Wind_Speed_m_s": 0,
+        "Average_Air_Temperature_C": 0,
+        "Minimum_Air_Temperature_C": 0,
+        "Maximum_Air_Temperature_C": 0,
+        "Average_Wall_Temperature_C": 0,
+        "Heat_Transfer_Rate_W": 0
+      },
+      "duplicate_rows": 0,
+      "duplicate_case_ids": null,
+      "unique_case_ids": null,
+      "unique_materials": [
+        "Aluminum",
+        "Concrete",
+        "EPS"
+      ],
+      "inputs_present": [
+        "Material",
+        "Wall_Thickness_m",
+        "External_Temperature_C",
+        "Initial_Air_Temperature_C",
+        "Wind_Speed_m_s"
+      ],
+      "targets_present": [
+        "Average_Air_Temperature_C",
+        "Minimum_Air_Temperature_C",
+        "Maximum_Air_Temperature_C",
+        "Heat_Transfer_Rate_W",
+        "Average_Wall_Temperature_C"
+      ],
+      "other_columns": [
+        "Solar_Radiation_kWh_m2_year"
+      ],
+      "missing_expected_features": [
+        "Material_Category",
+        "Thermal_Conductivity_W_mK",
+        "Density_kg_m3",
+        "Specific_Heat_J_kgK",
+        "Shelter_Length_m",
+        "Shelter_Width_m",
+        "Shelter_Height_m",
+        "Opening_Area_m2",
+        "Window_Area_m2",
+        "Door_Area_m2",
+        "Orientation_deg",
+        "Solar_Radiation_W_m2",
+        "Daily_Solar_Energy_kWh_m2",
+        "Relative_Humidity_percent",
+        "Simulation_Duration_h",
+        "Time_Step_min"
+      ],
+      "missing_expected_targets": [
+        "Solar_Heat_Input_W",
+        "Thermal_Energy_Loss_Wh"
+      ],
+      "provenance": {},
+      "constant_columns": [
+        "Initial_Air_Temperature_C",
+        "Solar_Radiation_kWh_m2_year",
+        "Wind_Speed_m_s"
+      ],
+      "highly_correlated_numeric_feature_pairs_abs_r_ge_0_98": [],
+      "physical_checks": [
+        {
+          "check": "Wall_Thickness_m > 0",
+          "violations": 0,
+          "interpretation": "Flag only; review against the source model and units."
+        },
+        {
+          "check": "Solar_Radiation_kWh_m2_year >= 0",
+          "violations": 0,
+          "interpretation": "Flag only; signed heat-flow rate is allowed and is not checked here."
+        },
+        {
+          "check": "Wind_Speed_m_s >= 0",
+          "violations": 0,
+          "interpretation": "Flag only; signed heat-flow rate is allowed and is not checked here."
+        },
+        {
+          "check": "minimum <= average <= maximum air temperature",
+          "violations": 0,
+          "interpretation": "Checks internal consistency of temperature summaries."
+        }
+      ],
+      "columns_detail": [
+        {
+          "column": "Material",
+          "dtype": "str",
+          "missing": 0,
+          "unique": 3,
+          "value_counts": {
+            "Aluminum": 21,
+            "Concrete": 21,
+            "EPS": 21
+          }
+        },
+        {
+          "column": "Wall_Thickness_m",
+          "dtype": "float64",
+          "missing": 0,
+          "unique": 3,
+          "nonfinite": 0,
+          "min": 0.1,
+          "q1": 0.1,
+          "median": 0.2,
+          "q3": 0.3,
+          "max": 0.3,
+          "iqr_outliers": 0
+        },
+        {
+          "column": "External_Temperature_C",
+          "dtype": "float64",
+          "missing": 0,
+          "unique": 7,
+          "nonfinite": 0,
+          "min": 25.0,
+          "q1": 27.5,
+          "median": 32.5,
+          "q3": 37.5,
+          "max": 40.0,
+          "iqr_outliers": 0
+        },
+        {
+          "column": "Initial_Air_Temperature_C",
+          "dtype": "float64",
+          "missing": 0,
+          "unique": 1,
+          "nonfinite": 0,
+          "min": 20.0,
+          "q1": 20.0,
+          "median": 20.0,
+          "q3": 20.0,
+          "max": 20.0,
+          "iqr_outliers": 0
+        },
+        {
+          "column": "Solar_Radiation_kWh_m2_year",
+          "dtype": "float64",
+          "missing": 0,
+          "unique": 1,
+          "nonfinite": 0,
+          "min": 2000.0,
+          "q1": 2000.0,
+          "median": 2000.0,
+          "q3": 2000.0,
+          "max": 2000.0,
+          "iqr_outliers": 0
+        },
+        {
+          "column": "Wind_Speed_m_s",
+          "dtype": "float64",
+          "missing": 0,
+          "unique": 1,
+          "nonfinite": 0,
+          "min": 5.0,
+          "q1": 5.0,
+          "median": 5.0,
+          "q3": 5.0,
+          "max": 5.0,
+          "iqr_outliers": 0
+        },
+        {
+          "column": "Average_Air_Temperature_C",
+          "dtype": "float64",
+          "missing": 0,
+          "unique": 63,
+          "nonfinite": 0,
+          "min": 21.4902,
+          "q1": 24.2731,
+          "median": 25.9693,
+          "q3": 28.45385,
+          "max": 31.0263,
+          "iqr_outliers": 0
+        },
+        {
+          "column": "Minimum_Air_Temperature_C",
+          "dtype": "float64",
+          "missing": 0,
+          "unique": 63,
+          "nonfinite": 0,
+          "min": 21.2902,
+          "q1": 24.0731,
+          "median": 25.7693,
+          "q3": 28.25385,
+          "max": 30.8263,
+          "iqr_outliers": 0
+        },
+        {
+          "column": "Maximum_Air_Temperature_C",
+          "dtype": "float64",
+          "missing": 0,
+          "unique": 63,
+          "nonfinite": 0,
+          "min": 21.6902,
+          "q1": 24.4731,
+          "median": 26.1693,
+          "q3": 28.65385,
+          "max": 31.2263,
+          "iqr_outliers": 0
+        },
+        {
+          "column": "Average_Wall_Temperature_C",
+          "dtype": "float64",
+          "missing": 0,
+          "unique": 63,
+          "nonfinite": 0,
+          "min": 22.9938,
+          "q1": 27.53145,
+          "median": 31.1588,
+          "q3": 35.007999999999996,
+          "max": 39.9091,
+          "iqr_outliers": 0
+        },
+        {
+          "column": "Heat_Transfer_Rate_W",
+          "dtype": "float64",
+          "missing": 0,
+          "unique": 63,
+          "nonfinite": 0,
+          "min": 12.8261,
+          "q1": 73.82905,
+          "median": 128.0922,
+          "q3": 217.37725,
+          "max": 290.5778,
+          "iqr_outliers": 0
+        }
+      ]
+    },
+    {
+      "filename": "ladakh_shelter_ml_dataset_updated (1).csv",
+      "path": "D:\\ladakh_shelter_ml_dataset_updated (1).csv",
+      "rows": 36,
+      "columns": 11,
+      "column_names": [
+        "Material",
+        "Wall_Thickness_m",
+        "External_Temperature_C",
+        "Initial_Air_Temperature_C",
+        "Solar_Radiation_kWh_m2_year",
+        "Wind_Speed_m_s",
+        "Average_Air_Temperature_C",
+        "Minimum_Air_Temperature_C",
+        "Maximum_Air_Temperature_C",
+        "Average_Wall_Temperature_C",
+        "Heat_Transfer_Rate_W"
+      ],
+      "dtypes": {
+        "Material": "str",
+        "Wall_Thickness_m": "float64",
+        "External_Temperature_C": "int64",
+        "Initial_Air_Temperature_C": "int64",
+        "Solar_Radiation_kWh_m2_year": "int64",
+        "Wind_Speed_m_s": "int64",
+        "Average_Air_Temperature_C": "float64",
+        "Minimum_Air_Temperature_C": "float64",
+        "Maximum_Air_Temperature_C": "float64",
+        "Average_Wall_Temperature_C": "float64",
+        "Heat_Transfer_Rate_W": "float64"
+      },
+      "missing_values": {
+        "Material": 0,
+        "Wall_Thickness_m": 0,
+        "External_Temperature_C": 0,
+        "Initial_Air_Temperature_C": 0,
+        "Solar_Radiation_kWh_m2_year": 0,
+        "Wind_Speed_m_s": 0,
+        "Average_Air_Temperature_C": 0,
+        "Minimum_Air_Temperature_C": 0,
+        "Maximum_Air_Temperature_C": 0,
+        "Average_Wall_Temperature_C": 0,
+        "Heat_Transfer_Rate_W": 0
+      },
+      "duplicate_rows": 0,
+      "duplicate_case_ids": null,
+      "unique_case_ids": null,
+      "unique_materials": [
+        "Aluminum",
+        "Concrete",
+        "EPS"
+      ],
+      "inputs_present": [
+        "Material",
+        "Wall_Thickness_m",
+        "External_Temperature_C",
+        "Initial_Air_Temperature_C",
+        "Wind_Speed_m_s"
+      ],
+      "targets_present": [
+        "Average_Air_Temperature_C",
+        "Minimum_Air_Temperature_C",
+        "Maximum_Air_Temperature_C",
+        "Heat_Transfer_Rate_W",
+        "Average_Wall_Temperature_C"
+      ],
+      "other_columns": [
+        "Solar_Radiation_kWh_m2_year"
+      ],
+      "missing_expected_features": [
+        "Material_Category",
+        "Thermal_Conductivity_W_mK",
+        "Density_kg_m3",
+        "Specific_Heat_J_kgK",
+        "Shelter_Length_m",
+        "Shelter_Width_m",
+        "Shelter_Height_m",
+        "Opening_Area_m2",
+        "Window_Area_m2",
+        "Door_Area_m2",
+        "Orientation_deg",
+        "Solar_Radiation_W_m2",
+        "Daily_Solar_Energy_kWh_m2",
+        "Relative_Humidity_percent",
+        "Simulation_Duration_h",
+        "Time_Step_min"
+      ],
+      "missing_expected_targets": [
+        "Solar_Heat_Input_W",
+        "Thermal_Energy_Loss_Wh"
+      ],
+      "provenance": {},
+      "constant_columns": [
+        "Initial_Air_Temperature_C",
+        "Solar_Radiation_kWh_m2_year",
+        "Wind_Speed_m_s"
+      ],
+      "highly_correlated_numeric_feature_pairs_abs_r_ge_0_98": [],
+      "physical_checks": [
+        {
+          "check": "Wall_Thickness_m > 0",
+          "violations": 0,
+          "interpretation": "Flag only; review against the source model and units."
+        },
+        {
+          "check": "Solar_Radiation_kWh_m2_year >= 0",
+          "violations": 0,
+          "interpretation": "Flag only; signed heat-flow rate is allowed and is not checked here."
+        },
+        {
+          "check": "Wind_Speed_m_s >= 0",
+          "violations": 0,
+          "interpretation": "Flag only; signed heat-flow rate is allowed and is not checked here."
+        },
+        {
+          "check": "minimum <= average <= maximum air temperature",
+          "violations": 0,
+          "interpretation": "Checks internal consistency of temperature summaries."
+        }
+      ],
+      "columns_detail": [
+        {
+          "column": "Material",
+          "dtype": "str",
+          "missing": 0,
+          "unique": 3,
+          "value_counts": {
+            "Aluminum": 12,
+            "Concrete": 12,
+            "EPS": 12
+          }
+        },
+        {
+          "column": "Wall_Thickness_m",
+          "dtype": "float64",
+          "missing": 0,
+          "unique": 3,
+          "nonfinite": 0,
+          "min": 0.1,
+          "q1": 0.1,
+          "median": 0.2,
+          "q3": 0.3,
+          "max": 0.3,
+          "iqr_outliers": 0
+        },
+        {
+          "column": "External_Temperature_C",
+          "dtype": "int64",
+          "missing": 0,
+          "unique": 4,
+          "nonfinite": 0,
+          "min": 25.0,
+          "q1": 28.75,
+          "median": 32.5,
+          "q3": 36.25,
+          "max": 40.0,
+          "iqr_outliers": 0
+        },
+        {
+          "column": "Initial_Air_Temperature_C",
+          "dtype": "int64",
+          "missing": 0,
+          "unique": 1,
+          "nonfinite": 0,
+          "min": 20.0,
+          "q1": 20.0,
+          "median": 20.0,
+          "q3": 20.0,
+          "max": 20.0,
+          "iqr_outliers": 0
+        },
+        {
+          "column": "Solar_Radiation_kWh_m2_year",
+          "dtype": "int64",
+          "missing": 0,
+          "unique": 1,
+          "nonfinite": 0,
+          "min": 2000.0,
+          "q1": 2000.0,
+          "median": 2000.0,
+          "q3": 2000.0,
+          "max": 2000.0,
+          "iqr_outliers": 0
+        },
+        {
+          "column": "Wind_Speed_m_s",
+          "dtype": "int64",
+          "missing": 0,
+          "unique": 1,
+          "nonfinite": 0,
+          "min": 5.0,
+          "q1": 5.0,
+          "median": 5.0,
+          "q3": 5.0,
+          "max": 5.0,
+          "iqr_outliers": 0
+        },
+        {
+          "column": "Average_Air_Temperature_C",
+          "dtype": "float64",
+          "missing": 0,
+          "unique": 36,
+          "nonfinite": 0,
+          "min": 21.4902,
+          "q1": 23.078374999999998,
+          "median": 25.79845,
+          "q3": 28.449624999999997,
+          "max": 31.0263,
+          "iqr_outliers": 0
+        },
+        {
+          "column": "Minimum_Air_Temperature_C",
+          "dtype": "float64",
+          "missing": 0,
+          "unique": 36,
+          "nonfinite": 0,
+          "min": 21.2902,
+          "q1": 22.878375,
+          "median": 25.59845,
+          "q3": 28.249625,
+          "max": 30.8263,
+          "iqr_outliers": 0
+        },
+        {
+          "column": "Maximum_Air_Temperature_C",
+          "dtype": "float64",
+          "missing": 0,
+          "unique": 36,
+          "nonfinite": 0,
+          "min": 21.6902,
+          "q1": 23.278375,
+          "median": 25.99845,
+          "q3": 28.649625,
+          "max": 31.2263,
+          "iqr_outliers": 0
+        },
+        {
+          "column": "Average_Wall_Temperature_C",
+          "dtype": "float64",
+          "missing": 0,
+          "unique": 36,
+          "nonfinite": 0,
+          "min": 22.9938,
+          "q1": 25.708125000000003,
+          "median": 30.0868,
+          "q3": 35.003,
+          "max": 39.9091,
+          "iqr_outliers": 0
+        },
+        {
+          "column": "Heat_Transfer_Rate_W",
+          "dtype": "float64",
+          "missing": 0,
+          "unique": 36,
+          "nonfinite": 0,
+          "min": 12.8261,
+          "q1": 74.34077500000001,
+          "median": 145.69275,
+          "q3": 217.377625,
+          "max": 290.5778,
+          "iqr_outliers": 0
+        }
+      ]
+    },
+    {
+      "filename": "ladakh_shelter_2000_batch4_physics_informed_dataset.csv",
+      "path": "C:\\Users\\bhumi\\AppData\\Local\\Packages\\5319275A.WhatsAppDesktop_cv1g1gvanyjgm\\LocalState\\sessions\\8886714C6C449E311A8F343EEDD0B4D96C1CACE0\\transfers\\2026-39\\ladakh_shelter_2000_batch4_physics_informed_dataset.csv",
+      "rows": 2000,
+      "columns": 41,
+      "column_names": [
+        "Case_ID",
+        "Material",
+        "Material_Category",
+        "Thermal_Conductivity_W_mK",
+        "Density_kg_m3",
+        "Specific_Heat_J_kgK",
+        "Wall_Thickness_m",
+        "Shelter_Length_m",
+        "Shelter_Width_m",
+        "Shelter_Height_m",
+        "Opening_Area_m2",
+        "Window_Area_m2",
+        "Door_Area_m2",
+        "Orientation_deg",
+        "External_Temperature_C",
+        "Initial_Air_Temperature_C",
+        "Solar_Radiation_W_m2",
+        "Daily_Solar_Energy_kWh_m2",
+        "Wind_Speed_m_s",
+        "Relative_Humidity_percent",
+        "Simulation_Duration_h",
+        "Time_Step_min",
+        "Average_Air_Temperature_C",
+        "Minimum_Air_Temperature_C",
+        "Maximum_Air_Temperature_C",
+        "Average_Wall_Temperature_C",
+        "Minimum_Wall_Temperature_C",
+        "Maximum_Wall_Temperature_C",
+        "Heat_Transfer_Rate_W",
+        "Average_Heat_Flux_W_m2",
+        "Maximum_Heat_Flux_W_m2",
+        "Solar_Heat_Input_W",
+        "Total_Heat_Transferred_Wh",
+        "Indoor_Temperature_Rise_C",
+        "Thermal_Energy_Loss_Wh",
+        "Data_Type",
+        "CFD_Reference",
+        "Climate_Data_Source",
+        "Material_Data_Source",
+        "Surrogate_Method",
+        "Batch"
+      ],
+      "dtypes": {
+        "Case_ID": "str",
+        "Material": "str",
+        "Material_Category": "str",
+        "Thermal_Conductivity_W_mK": "float64",
+        "Density_kg_m3": "float64",
+        "Specific_Heat_J_kgK": "float64",
+        "Wall_Thickness_m": "float64",
+        "Shelter_Length_m": "float64",
+        "Shelter_Width_m": "float64",
+        "Shelter_Height_m": "float64",
+        "Opening_Area_m2": "float64",
+        "Window_Area_m2": "float64",
+        "Door_Area_m2": "float64",
+        "Orientation_deg": "int64",
+        "External_Temperature_C": "float64",
+        "Initial_Air_Temperature_C": "float64",
+        "Solar_Radiation_W_m2": "float64",
+        "Daily_Solar_Energy_kWh_m2": "float64",
+        "Wind_Speed_m_s": "float64",
+        "Relative_Humidity_percent": "float64",
+        "Simulation_Duration_h": "float64",
+        "Time_Step_min": "int64",
+        "Average_Air_Temperature_C": "float64",
+        "Minimum_Air_Temperature_C": "float64",
+        "Maximum_Air_Temperature_C": "float64",
+        "Average_Wall_Temperature_C": "float64",
+        "Minimum_Wall_Temperature_C": "float64",
+        "Maximum_Wall_Temperature_C": "float64",
+        "Heat_Transfer_Rate_W": "float64",
+        "Average_Heat_Flux_W_m2": "float64",
+        "Maximum_Heat_Flux_W_m2": "float64",
+        "Solar_Heat_Input_W": "float64",
+        "Total_Heat_Transferred_Wh": "float64",
+        "Indoor_Temperature_Rise_C": "float64",
+        "Thermal_Energy_Loss_Wh": "float64",
+        "Data_Type": "str",
+        "CFD_Reference": "str",
+        "Climate_Data_Source": "str",
+        "Material_Data_Source": "str",
+        "Surrogate_Method": "str",
+        "Batch": "str"
+      },
+      "missing_values": {
+        "Case_ID": 0,
+        "Material": 0,
+        "Material_Category": 0,
+        "Thermal_Conductivity_W_mK": 0,
+        "Density_kg_m3": 0,
+        "Specific_Heat_J_kgK": 0,
+        "Wall_Thickness_m": 0,
+        "Shelter_Length_m": 0,
+        "Shelter_Width_m": 0,
+        "Shelter_Height_m": 0,
+        "Opening_Area_m2": 0,
+        "Window_Area_m2": 0,
+        "Door_Area_m2": 0,
+        "Orientation_deg": 0,
+        "External_Temperature_C": 0,
+        "Initial_Air_Temperature_C": 0,
+        "Solar_Radiation_W_m2": 0,
+        "Daily_Solar_Energy_kWh_m2": 0,
+        "Wind_Speed_m_s": 0,
+        "Relative_Humidity_percent": 0,
+        "Simulation_Duration_h": 0,
+        "Time_Step_min": 0,
+        "Average_Air_Temperature_C": 0,
+        "Minimum_Air_Temperature_C": 0,
+        "Maximum_Air_Temperature_C": 0,
+        "Average_Wall_Temperature_C": 0,
+        "Minimum_Wall_Temperature_C": 0,
+        "Maximum_Wall_Temperature_C": 0,
+        "Heat_Transfer_Rate_W": 0,
+        "Average_Heat_Flux_W_m2": 0,
+        "Maximum_Heat_Flux_W_m2": 0,
+        "Solar_Heat_Input_W": 0,
+        "Total_Heat_Transferred_Wh": 0,
+        "Indoor_Temperature_Rise_C": 0,
+        "Thermal_Energy_Loss_Wh": 0,
+        "Data_Type": 0,
+        "CFD_Reference": 0,
+        "Climate_Data_Source": 0,
+        "Material_Data_Source": 0,
+        "Surrogate_Method": 0,
+        "Batch": 0
+      },
+      "duplicate_rows": 0,
+      "duplicate_case_ids": 0,
+      "unique_case_ids": 2000,
+      "unique_materials": [
+        "Aerated concrete / AAC",
+        "Aluminum",
+        "Brick",
+        "Composite insulated wall",
+        "Concrete",
+        "EPS insulation",
+        "Polyurethane foam (PU)",
+        "Rock wool / mineral wool",
+        "Wood / timber"
+      ],
+      "inputs_present": [
+        "Material",
+        "Material_Category",
+        "Thermal_Conductivity_W_mK",
+        "Density_kg_m3",
+        "Specific_Heat_J_kgK",
+        "Wall_Thickness_m",
+        "Shelter_Length_m",
+        "Shelter_Width_m",
+        "Shelter_Height_m",
+        "Opening_Area_m2",
+        "Window_Area_m2",
+        "Door_Area_m2",
+        "Orientation_deg",
+        "External_Temperature_C",
+        "Initial_Air_Temperature_C",
+        "Solar_Radiation_W_m2",
+        "Daily_Solar_Energy_kWh_m2",
+        "Wind_Speed_m_s",
+        "Relative_Humidity_percent",
+        "Simulation_Duration_h",
+        "Time_Step_min"
+      ],
+      "targets_present": [
+        "Average_Air_Temperature_C",
+        "Minimum_Air_Temperature_C",
+        "Maximum_Air_Temperature_C",
+        "Solar_Heat_Input_W",
+        "Heat_Transfer_Rate_W",
+        "Thermal_Energy_Loss_Wh",
+        "Average_Wall_Temperature_C",
+        "Average_Heat_Flux_W_m2",
+        "Maximum_Heat_Flux_W_m2",
+        "Total_Heat_Transferred_Wh",
+        "Indoor_Temperature_Rise_C"
+      ],
+      "other_columns": [
+        "Case_ID",
+        "Minimum_Wall_Temperature_C",
+        "Maximum_Wall_Temperature_C",
+        "Data_Type",
+        "CFD_Reference",
+        "Climate_Data_Source",
+        "Material_Data_Source",
+        "Surrogate_Method",
+        "Batch"
+      ],
+      "missing_expected_features": [],
+      "missing_expected_targets": [],
+      "provenance": {
+        "Data_Type": [
+          "PHYSICS_INFORMED_ESTIMATE"
+        ],
+        "CFD_Reference": [
+          "Calibrated against 3 ANSYS Fluent validation cases (Aluminum/Concrete/EPS, 0.20 m, Text=35C, Tinit=20C)"
+        ],
+        "Climate_Data_Source": [
+          "Representative high-altitude cold-desert climate ranges for Ladakh (not a direct NASA POWER data pull)"
+        ],
+        "Material_Data_Source": [
+          "Standard engineering material-property handbook ranges"
+        ],
+        "Surrogate_Method": [
+          "Physics-informed R=L/k+R_film network, log(k)-interpolated correction anchored to 3 Fluent points"
+        ],
+        "Batch": [
+          "Batch_4"
+        ]
+      },
+      "constant_columns": [
+        "Data_Type",
+        "CFD_Reference",
+        "Climate_Data_Source",
+        "Material_Data_Source",
+        "Surrogate_Method",
+        "Batch"
+      ],
+      "highly_correlated_numeric_feature_pairs_abs_r_ge_0_98": [
+        {
+          "left": "Solar_Radiation_W_m2",
+          "right": "Daily_Solar_Energy_kWh_m2",
+          "pearson_r": 0.9999999823451707
+        },
+        {
+          "left": "Opening_Area_m2",
+          "right": "Window_Area_m2",
+          "pearson_r": 0.9891348089312596
+        }
+      ],
+      "physical_checks": [
+        {
+          "check": "Thermal_Conductivity_W_mK > 0",
+          "violations": 0,
+          "interpretation": "Flag only; review against the source model and units."
+        },
+        {
+          "check": "Density_kg_m3 > 0",
+          "violations": 0,
+          "interpretation": "Flag only; review against the source model and units."
+        },
+        {
+          "check": "Specific_Heat_J_kgK > 0",
+          "violations": 0,
+          "interpretation": "Flag only; review against the source model and units."
+        },
+        {
+          "check": "Wall_Thickness_m > 0",
+          "violations": 0,
+          "interpretation": "Flag only; review against the source model and units."
+        },
+        {
+          "check": "Shelter_Length_m > 0",
+          "violations": 0,
+          "interpretation": "Flag only; review against the source model and units."
+        },
+        {
+          "check": "Shelter_Width_m > 0",
+          "violations": 0,
+          "interpretation": "Flag only; review against the source model and units."
+        },
+        {
+          "check": "Shelter_Height_m > 0",
+          "violations": 0,
+          "interpretation": "Flag only; review against the source model and units."
+        },
+        {
+          "check": "Simulation_Duration_h > 0",
+          "violations": 0,
+          "interpretation": "Flag only; review against the source model and units."
+        },
+        {
+          "check": "Time_Step_min > 0",
+          "violations": 0,
+          "interpretation": "Flag only; review against the source model and units."
+        },
+        {
+          "check": "Opening_Area_m2 >= 0",
+          "violations": 0,
+          "interpretation": "Flag only; signed heat-flow rate is allowed and is not checked here."
+        },
+        {
+          "check": "Window_Area_m2 >= 0",
+          "violations": 0,
+          "interpretation": "Flag only; signed heat-flow rate is allowed and is not checked here."
+        },
+        {
+          "check": "Door_Area_m2 >= 0",
+          "violations": 0,
+          "interpretation": "Flag only; signed heat-flow rate is allowed and is not checked here."
+        },
+        {
+          "check": "Solar_Radiation_W_m2 >= 0",
+          "violations": 0,
+          "interpretation": "Flag only; signed heat-flow rate is allowed and is not checked here."
+        },
+        {
+          "check": "Daily_Solar_Energy_kWh_m2 >= 0",
+          "violations": 0,
+          "interpretation": "Flag only; signed heat-flow rate is allowed and is not checked here."
+        },
+        {
+          "check": "Wind_Speed_m_s >= 0",
+          "violations": 0,
+          "interpretation": "Flag only; signed heat-flow rate is allowed and is not checked here."
+        },
+        {
+          "check": "Solar_Heat_Input_W >= 0",
+          "violations": 0,
+          "interpretation": "Flag only; signed heat-flow rate is allowed and is not checked here."
+        },
+        {
+          "check": "Thermal_Energy_Loss_Wh >= 0",
+          "violations": 0,
+          "interpretation": "Flag only; signed heat-flow rate is allowed and is not checked here."
+        },
+        {
+          "check": "Relative_Humidity_percent in [0, 100]",
+          "violations": 0,
+          "interpretation": "Outside conventional percentage bounds."
+        },
+        {
+          "check": "Orientation_deg in [0, 360]",
+          "violations": 0,
+          "interpretation": "Outside the stated compass-angle range."
+        },
+        {
+          "check": "minimum <= average <= maximum air temperature",
+          "violations": 0,
+          "interpretation": "Checks internal consistency of temperature summaries."
+        },
+        {
+          "check": "opening area equals window area + door area",
+          "violations": 0,
+          "interpretation": "Potential deterministic relationship/redundant inputs; values retained."
+        }
+      ],
+      "columns_detail": [
+        {
+          "column": "Case_ID",
+          "dtype": "str",
+          "missing": 0,
+          "unique": 2000,
+          "value_counts": "omitted for high-cardinality column (2000 unique values)"
+        },
+        {
+          "column": "Material",
+          "dtype": "str",
+          "missing": 0,
+          "unique": 9,
+          "value_counts": {
+            "Brick": 240,
+            "Wood / timber": 240,
+            "Rock wool / mineral wool": 240,
+            "Polyurethane foam (PU)": 240,
+            "Composite insulated wall": 240,
+            "Aerated concrete / AAC": 239,
+            "Concrete": 188,
+            "EPS insulation": 187,
+            "Aluminum": 186
+          }
+        },
+        {
+          "column": "Material_Category",
+          "dtype": "str",
+          "missing": 0,
+          "unique": 5,
+          "value_counts": {
+            "Masonry": 667,
+            "Insulation": 667,
+            "Timber": 240,
+            "Composite": 240,
+            "Metal": 186
+          }
+        },
+        {
+          "column": "Thermal_Conductivity_W_mK",
+          "dtype": "float64",
+          "missing": 0,
+          "unique": 1477,
+          "nonfinite": 0,
+          "min": 0.02,
+          "q1": 0.0436,
+          "median": 0.1248,
+          "q3": 0.7674500000000001,
+          "max": 219.8112,
+          "iqr_outliers": 217
+        },
+        {
+          "column": "Density_kg_m3",
+          "dtype": "float64",
+          "missing": 0,
+          "unique": 1530,
+          "nonfinite": 0,
+          "min": 15.2,
+          "q1": 56.0,
+          "median": 547.75,
+          "q3": 1787.325,
+          "max": 2700.0,
+          "iqr_outliers": 0
+        },
+        {
+          "column": "Specific_Heat_J_kgK",
+          "dtype": "float64",
+          "missing": 0,
+          "unique": 1658,
+          "nonfinite": 0,
+          "min": 800.3,
+          "q1": 896.8,
+          "median": 971.2,
+          "q3": 1404.225,
+          "max": 2487.2,
+          "iqr_outliers": 72
+        },
+        {
+          "column": "Wall_Thickness_m",
+          "dtype": "float64",
+          "missing": 0,
+          "unique": 351,
+          "nonfinite": 0,
+          "min": 0.05,
+          "q1": 0.13775,
+          "median": 0.225,
+          "q3": 0.31225,
+          "max": 0.4,
+          "iqr_outliers": 0
+        },
+        {
+          "column": "Shelter_Length_m",
+          "dtype": "float64",
+          "missing": 0,
+          "unique": 301,
+          "nonfinite": 0,
+          "min": 3.0,
+          "q1": 3.75,
+          "median": 4.5,
+          "q3": 5.25,
+          "max": 6.0,
+          "iqr_outliers": 0
+        },
+        {
+          "column": "Shelter_Width_m",
+          "dtype": "float64",
+          "missing": 0,
+          "unique": 251,
+          "nonfinite": 0,
+          "min": 2.5,
+          "q1": 3.1275,
+          "median": 3.75,
+          "q3": 4.3725000000000005,
+          "max": 5.0,
+          "iqr_outliers": 0
+        },
+        {
+          "column": "Shelter_Height_m",
+          "dtype": "float64",
+          "missing": 0,
+          "unique": 131,
+          "nonfinite": 0,
+          "min": 2.2,
+          "q1": 2.5275,
+          "median": 2.85,
+          "q3": 3.1725,
+          "max": 3.5,
+          "iqr_outliers": 0
+        },
+        {
+          "column": "Opening_Area_m2",
+          "dtype": "float64",
+          "missing": 0,
+          "unique": 924,
+          "nonfinite": 0,
+          "min": 1.67,
+          "q1": 4.557499999999999,
+          "median": 6.83,
+          "q3": 9.12,
+          "max": 16.61,
+          "iqr_outliers": 2
+        },
+        {
+          "column": "Window_Area_m2",
+          "dtype": "float64",
+          "missing": 0,
+          "unique": 910,
+          "nonfinite": 0,
+          "min": 0.0,
+          "q1": 2.26,
+          "median": 4.58,
+          "q3": 6.8825,
+          "max": 13.98,
+          "iqr_outliers": 1
+        },
+        {
+          "column": "Door_Area_m2",
+          "dtype": "float64",
+          "missing": 0,
+          "unique": 151,
+          "nonfinite": 0,
+          "min": 1.5,
+          "q1": 1.8775,
+          "median": 2.25,
+          "q3": 2.6225,
+          "max": 3.0,
+          "iqr_outliers": 0
+        },
+        {
+          "column": "Orientation_deg",
+          "dtype": "int64",
+          "missing": 0,
+          "unique": 8,
+          "nonfinite": 0,
+          "min": 0.0,
+          "q1": 78.75,
+          "median": 157.5,
+          "q3": 236.25,
+          "max": 315.0,
+          "iqr_outliers": 0
+        },
+        {
+          "column": "External_Temperature_C",
+          "dtype": "float64",
+          "missing": 0,
+          "unique": 1922,
+          "nonfinite": 0,
+          "min": -19.98,
+          "q1": -7.85,
+          "median": 4.92,
+          "q3": 18.759999999999998,
+          "max": 39.98,
+          "iqr_outliers": 0
+        },
+        {
+          "column": "Initial_Air_Temperature_C",
+          "dtype": "float64",
+          "missing": 0,
+          "unique": 1500,
+          "nonfinite": 0,
+          "min": 5.01,
+          "q1": 10.0075,
+          "median": 15.004999999999999,
+          "q3": 20.0025,
+          "max": 24.99,
+          "iqr_outliers": 0
+        },
+        {
+          "column": "Solar_Radiation_W_m2",
+          "dtype": "float64",
+          "missing": 0,
+          "unique": 1988,
+          "nonfinite": 0,
+          "min": 333.8,
+          "q1": 583.525,
+          "median": 833.25,
+          "q3": 1083.1,
+          "max": 1332.9,
+          "iqr_outliers": 0
+        },
+        {
+          "column": "Daily_Solar_Energy_kWh_m2",
+          "dtype": "float64",
+          "missing": 0,
+          "unique": 1952,
+          "nonfinite": 0,
+          "min": 2.003,
+          "q1": 3.5015,
+          "median": 5.0,
+          "q3": 6.49875,
+          "max": 7.997,
+          "iqr_outliers": 0
+        },
+        {
+          "column": "Wind_Speed_m_s",
+          "dtype": "float64",
+          "missing": 0,
+          "unique": 1183,
+          "nonfinite": 0,
+          "min": 0.0,
+          "q1": 3.0,
+          "median": 6.0,
+          "q3": 9.0025,
+          "max": 12.0,
+          "iqr_outliers": 0
+        },
+        {
+          "column": "Relative_Humidity_percent",
+          "dtype": "float64",
+          "missing": 0,
+          "unique": 701,
+          "nonfinite": 0,
+          "min": 10.0,
+          "q1": 27.5,
+          "median": 45.0,
+          "q3": 62.5,
+          "max": 80.0,
+          "iqr_outliers": 0
+        },
+        {
+          "column": "Simulation_Duration_h",
+          "dtype": "float64",
+          "missing": 0,
+          "unique": 421,
+          "nonfinite": 0,
+          "min": 6.0,
+          "q1": 16.5,
+          "median": 27.0,
+          "q3": 37.5,
+          "max": 48.0,
+          "iqr_outliers": 0
+        },
+        {
+          "column": "Time_Step_min",
+          "dtype": "int64",
+          "missing": 0,
+          "unique": 6,
+          "nonfinite": 0,
+          "min": 1.0,
+          "q1": 2.0,
+          "median": 5.0,
+          "q3": 15.0,
+          "max": 30.0,
+          "iqr_outliers": 0
+        },
+        {
+          "column": "Average_Air_Temperature_C",
+          "dtype": "float64",
+          "missing": 0,
+          "unique": 1933,
+          "nonfinite": 0,
+          "min": -7.725,
+          "q1": 3.7355,
+          "median": 9.8095,
+          "q3": 17.3355,
+          "max": 32.892,
+          "iqr_outliers": 0
+        },
+        {
+          "column": "Minimum_Air_Temperature_C",
+          "dtype": "float64",
+          "missing": 0,
+          "unique": 1506,
+          "nonfinite": 0,
+          "min": -9.32,
+          "q1": 2.89,
+          "median": 8.975000000000001,
+          "q3": 16.53,
+          "max": 31.65,
+          "iqr_outliers": 0
+        },
+        {
+          "column": "Maximum_Air_Temperature_C",
+          "dtype": "float64",
+          "missing": 0,
+          "unique": 1507,
+          "nonfinite": 0,
+          "min": -5.65,
+          "q1": 4.96,
+          "median": 11.015,
+          "q3": 18.41,
+          "max": 34.75,
+          "iqr_outliers": 0
+        },
+        {
+          "column": "Average_Wall_Temperature_C",
+          "dtype": "float64",
+          "missing": 0,
+          "unique": 1971,
+          "nonfinite": 0,
+          "min": -19.515,
+          "q1": -5.0145,
+          "median": 6.165,
+          "q3": 18.41025,
+          "max": 39.616,
+          "iqr_outliers": 0
+        },
+        {
+          "column": "Minimum_Wall_Temperature_C",
+          "dtype": "float64",
+          "missing": 0,
+          "unique": 1681,
+          "nonfinite": 0,
+          "min": -21.83,
+          "q1": -6.205,
+          "median": 4.835,
+          "q3": 17.017500000000002,
+          "max": 37.76,
+          "iqr_outliers": 0
+        },
+        {
+          "column": "Maximum_Wall_Temperature_C",
+          "dtype": "float64",
+          "missing": 0,
+          "unique": 1666,
+          "nonfinite": 0,
+          "min": -16.26,
+          "q1": -3.315,
+          "median": 8.1,
+          "q3": 20.11,
+          "max": 42.94,
+          "iqr_outliers": 0
+        },
+        {
+          "column": "Heat_Transfer_Rate_W",
+          "dtype": "float64",
+          "missing": 0,
+          "unique": 2000,
+          "nonfinite": 0,
+          "min": -1152.2206,
+          "q1": -195.749125,
+          "median": -62.7464,
+          "q3": 30.422425,
+          "max": 794.9907,
+          "iqr_outliers": 132
+        },
+        {
+          "column": "Average_Heat_Flux_W_m2",
+          "dtype": "float64",
+          "missing": 0,
+          "unique": 1827,
+          "nonfinite": 0,
+          "min": -13.817,
+          "q1": -3.557,
+          "median": -1.1885,
+          "q3": 0.567,
+          "max": 11.02,
+          "iqr_outliers": 110
+        },
+        {
+          "column": "Maximum_Heat_Flux_W_m2",
+          "dtype": "float64",
+          "missing": 0,
+          "unique": 1863,
+          "nonfinite": 0,
+          "min": -15.89,
+          "q1": -4.091,
+          "median": -1.3665,
+          "q3": 0.65125,
+          "max": 12.673,
+          "iqr_outliers": 110
+        },
+        {
+          "column": "Solar_Heat_Input_W",
+          "dtype": "float64",
+          "missing": 0,
+          "unique": 1998,
+          "nonfinite": 0,
+          "min": 415.26,
+          "q1": 3532.63,
+          "median": 9614.41,
+          "q3": 18755.37,
+          "max": 58072.09,
+          "iqr_outliers": 38
+        },
+        {
+          "column": "Total_Heat_Transferred_Wh",
+          "dtype": "float64",
+          "missing": 0,
+          "unique": 1992,
+          "nonfinite": 0,
+          "min": -40001.2,
+          "q1": -4868.775,
+          "median": -1443.15,
+          "q3": 677.1500000000001,
+          "max": 23929.2,
+          "iqr_outliers": 198
+        },
+        {
+          "column": "Indoor_Temperature_Rise_C",
+          "dtype": "float64",
+          "missing": 0,
+          "unique": 1507,
+          "nonfinite": 0,
+          "min": -24.54,
+          "q1": -11.2025,
+          "median": -5.0,
+          "q3": 2.37,
+          "max": 18.51,
+          "iqr_outliers": 0
+        },
+        {
+          "column": "Thermal_Energy_Loss_Wh",
+          "dtype": "float64",
+          "missing": 0,
+          "unique": 1360,
+          "nonfinite": 0,
+          "min": 0.0,
+          "q1": 0.0,
+          "median": 1443.15,
+          "q3": 4868.775,
+          "max": 40001.2,
+          "iqr_outliers": 157
+        },
+        {
+          "column": "Data_Type",
+          "dtype": "str",
+          "missing": 0,
+          "unique": 1,
+          "value_counts": {
+            "PHYSICS_INFORMED_ESTIMATE": 2000
+          }
+        },
+        {
+          "column": "CFD_Reference",
+          "dtype": "str",
+          "missing": 0,
+          "unique": 1,
+          "value_counts": {
+            "Calibrated against 3 ANSYS Fluent validation cases (Aluminum/Concrete/EPS, 0.20 m, Text=35C, Tinit=20C)": 2000
+          }
+        },
+        {
+          "column": "Climate_Data_Source",
+          "dtype": "str",
+          "missing": 0,
+          "unique": 1,
+          "value_counts": {
+            "Representative high-altitude cold-desert climate ranges for Ladakh (not a direct NASA POWER data pull)": 2000
+          }
+        },
+        {
+          "column": "Material_Data_Source",
+          "dtype": "str",
+          "missing": 0,
+          "unique": 1,
+          "value_counts": {
+            "Standard engineering material-property handbook ranges": 2000
+          }
+        },
+        {
+          "column": "Surrogate_Method",
+          "dtype": "str",
+          "missing": 0,
+          "unique": 1,
+          "value_counts": {
+            "Physics-informed R=L/k+R_film network, log(k)-interpolated correction anchored to 3 Fluent points": 2000
+          }
+        },
+        {
+          "column": "Batch",
+          "dtype": "str",
+          "missing": 0,
+          "unique": 1,
+          "value_counts": {
+            "Batch_4": 2000
+          }
+        }
+      ]
+    }
+  ],
+  "pairwise_comparisons": [
+    {
+      "left": "ladakh_shelter_1500_batch3_physics_informed_dataset.csv",
+      "right": "ladakh_shelter_ml_dataset_63_cases.csv",
+      "identical_schema": false,
+      "left_only_columns": [
+        "Case_ID",
+        "Material_Category",
+        "Thermal_Conductivity_W_mK",
+        "Density_kg_m3",
+        "Specific_Heat_J_kgK",
+        "Shelter_Length_m",
+        "Shelter_Width_m",
+        "Shelter_Height_m",
+        "Opening_Area_m2",
+        "Window_Area_m2",
+        "Door_Area_m2",
+        "Orientation_deg",
+        "Solar_Radiation_W_m2",
+        "Daily_Solar_Energy_kWh_m2",
+        "Relative_Humidity_percent",
+        "Simulation_Duration_h",
+        "Time_Step_min",
+        "Minimum_Wall_Temperature_C",
+        "Maximum_Wall_Temperature_C",
+        "Average_Heat_Flux_W_m2",
+        "Maximum_Heat_Flux_W_m2",
+        "Solar_Heat_Input_W",
+        "Total_Heat_Transferred_Wh",
+        "Indoor_Temperature_Rise_C",
+        "Thermal_Energy_Loss_Wh",
+        "Data_Type",
+        "CFD_Reference",
+        "Climate_Data_Source",
+        "Material_Data_Source",
+        "Surrogate_Method",
+        "Batch"
+      ],
+      "right_only_columns": [
+        "Solar_Radiation_kWh_m2_year"
+      ],
+      "common_columns": [
+        "Material",
+        "Wall_Thickness_m",
+        "External_Temperature_C",
+        "Initial_Air_Temperature_C",
+        "Wind_Speed_m_s",
+        "Average_Air_Temperature_C",
+        "Minimum_Air_Temperature_C",
+        "Maximum_Air_Temperature_C",
+        "Average_Wall_Temperature_C",
+        "Heat_Transfer_Rate_W"
+      ],
+      "shared_targets": [
+        "Average_Air_Temperature_C",
+        "Minimum_Air_Temperature_C",
+        "Maximum_Air_Temperature_C",
+        "Heat_Transfer_Rate_W",
+        "Average_Wall_Temperature_C"
+      ],
+      "shared_expected_features": [
+        "Material",
+        "Wall_Thickness_m",
+        "External_Temperature_C",
+        "Initial_Air_Temperature_C",
+        "Wind_Speed_m_s"
+      ],
+      "exact_row_overlap": null,
+      "shared_condition_key_columns": [
+        "Material",
+        "Wall_Thickness_m",
+        "External_Temperature_C",
+        "Initial_Air_Temperature_C"
+      ],
+      "shared_condition_tuple_overlap": 0,
+      "case_id_overlap": null,
+      "material_name_intersection": [
+        "Aluminum",
+        "Concrete"
+      ]
+    },
+    {
+      "left": "ladakh_shelter_1500_batch3_physics_informed_dataset.csv",
+      "right": "ladakh_shelter_ml_dataset_updated (1).csv",
+      "identical_schema": false,
+      "left_only_columns": [
+        "Case_ID",
+        "Material_Category",
+        "Thermal_Conductivity_W_mK",
+        "Density_kg_m3",
+        "Specific_Heat_J_kgK",
+        "Shelter_Length_m",
+        "Shelter_Width_m",
+        "Shelter_Height_m",
+        "Opening_Area_m2",
+        "Window_Area_m2",
+        "Door_Area_m2",
+        "Orientation_deg",
+        "Solar_Radiation_W_m2",
+        "Daily_Solar_Energy_kWh_m2",
+        "Relative_Humidity_percent",
+        "Simulation_Duration_h",
+        "Time_Step_min",
+        "Minimum_Wall_Temperature_C",
+        "Maximum_Wall_Temperature_C",
+        "Average_Heat_Flux_W_m2",
+        "Maximum_Heat_Flux_W_m2",
+        "Solar_Heat_Input_W",
+        "Total_Heat_Transferred_Wh",
+        "Indoor_Temperature_Rise_C",
+        "Thermal_Energy_Loss_Wh",
+        "Data_Type",
+        "CFD_Reference",
+        "Climate_Data_Source",
+        "Material_Data_Source",
+        "Surrogate_Method",
+        "Batch"
+      ],
+      "right_only_columns": [
+        "Solar_Radiation_kWh_m2_year"
+      ],
+      "common_columns": [
+        "Material",
+        "Wall_Thickness_m",
+        "External_Temperature_C",
+        "Initial_Air_Temperature_C",
+        "Wind_Speed_m_s",
+        "Average_Air_Temperature_C",
+        "Minimum_Air_Temperature_C",
+        "Maximum_Air_Temperature_C",
+        "Average_Wall_Temperature_C",
+        "Heat_Transfer_Rate_W"
+      ],
+      "shared_targets": [
+        "Average_Air_Temperature_C",
+        "Minimum_Air_Temperature_C",
+        "Maximum_Air_Temperature_C",
+        "Heat_Transfer_Rate_W",
+        "Average_Wall_Temperature_C"
+      ],
+      "shared_expected_features": [
+        "Material",
+        "Wall_Thickness_m",
+        "External_Temperature_C",
+        "Initial_Air_Temperature_C",
+        "Wind_Speed_m_s"
+      ],
+      "exact_row_overlap": null,
+      "shared_condition_key_columns": [
+        "Material",
+        "Wall_Thickness_m",
+        "External_Temperature_C",
+        "Initial_Air_Temperature_C"
+      ],
+      "shared_condition_tuple_overlap": 0,
+      "case_id_overlap": null,
+      "material_name_intersection": [
+        "Aluminum",
+        "Concrete"
+      ]
+    },
+    {
+      "left": "ladakh_shelter_1500_batch3_physics_informed_dataset.csv",
+      "right": "ladakh_shelter_2000_batch4_physics_informed_dataset.csv",
+      "identical_schema": true,
+      "left_only_columns": [],
+      "right_only_columns": [],
+      "common_columns": [
+        "Case_ID",
+        "Material",
+        "Material_Category",
+        "Thermal_Conductivity_W_mK",
+        "Density_kg_m3",
+        "Specific_Heat_J_kgK",
+        "Wall_Thickness_m",
+        "Shelter_Length_m",
+        "Shelter_Width_m",
+        "Shelter_Height_m",
+        "Opening_Area_m2",
+        "Window_Area_m2",
+        "Door_Area_m2",
+        "Orientation_deg",
+        "External_Temperature_C",
+        "Initial_Air_Temperature_C",
+        "Solar_Radiation_W_m2",
+        "Daily_Solar_Energy_kWh_m2",
+        "Wind_Speed_m_s",
+        "Relative_Humidity_percent",
+        "Simulation_Duration_h",
+        "Time_Step_min",
+        "Average_Air_Temperature_C",
+        "Minimum_Air_Temperature_C",
+        "Maximum_Air_Temperature_C",
+        "Average_Wall_Temperature_C",
+        "Minimum_Wall_Temperature_C",
+        "Maximum_Wall_Temperature_C",
+        "Heat_Transfer_Rate_W",
+        "Average_Heat_Flux_W_m2",
+        "Maximum_Heat_Flux_W_m2",
+        "Solar_Heat_Input_W",
+        "Total_Heat_Transferred_Wh",
+        "Indoor_Temperature_Rise_C",
+        "Thermal_Energy_Loss_Wh",
+        "Data_Type",
+        "CFD_Reference",
+        "Climate_Data_Source",
+        "Material_Data_Source",
+        "Surrogate_Method",
+        "Batch"
+      ],
+      "shared_targets": [
+        "Average_Air_Temperature_C",
+        "Minimum_Air_Temperature_C",
+        "Maximum_Air_Temperature_C",
+        "Solar_Heat_Input_W",
+        "Heat_Transfer_Rate_W",
+        "Thermal_Energy_Loss_Wh",
+        "Average_Wall_Temperature_C",
+        "Average_Heat_Flux_W_m2",
+        "Maximum_Heat_Flux_W_m2",
+        "Total_Heat_Transferred_Wh",
+        "Indoor_Temperature_Rise_C"
+      ],
+      "shared_expected_features": [
+        "Material",
+        "Material_Category",
+        "Thermal_Conductivity_W_mK",
+        "Density_kg_m3",
+        "Specific_Heat_J_kgK",
+        "Wall_Thickness_m",
+        "Shelter_Length_m",
+        "Shelter_Width_m",
+        "Shelter_Height_m",
+        "Opening_Area_m2",
+        "Window_Area_m2",
+        "Door_Area_m2",
+        "Orientation_deg",
+        "External_Temperature_C",
+        "Initial_Air_Temperature_C",
+        "Solar_Radiation_W_m2",
+        "Daily_Solar_Energy_kWh_m2",
+        "Wind_Speed_m_s",
+        "Relative_Humidity_percent",
+        "Simulation_Duration_h",
+        "Time_Step_min"
+      ],
+      "exact_row_overlap": 0,
+      "shared_condition_key_columns": [
+        "Material",
+        "Wall_Thickness_m",
+        "External_Temperature_C",
+        "Initial_Air_Temperature_C"
+      ],
+      "shared_condition_tuple_overlap": 0,
+      "case_id_overlap": 0,
+      "material_name_intersection": [
+        "Aerated concrete / AAC",
+        "Aluminum",
+        "Brick",
+        "Composite insulated wall",
+        "Concrete",
+        "EPS insulation",
+        "Polyurethane foam (PU)",
+        "Rock wool / mineral wool",
+        "Wood / timber"
+      ]
+    },
+    {
+      "left": "ladakh_shelter_ml_dataset_63_cases.csv",
+      "right": "ladakh_shelter_ml_dataset_updated (1).csv",
+      "identical_schema": true,
+      "left_only_columns": [],
+      "right_only_columns": [],
+      "common_columns": [
+        "Material",
+        "Wall_Thickness_m",
+        "External_Temperature_C",
+        "Initial_Air_Temperature_C",
+        "Solar_Radiation_kWh_m2_year",
+        "Wind_Speed_m_s",
+        "Average_Air_Temperature_C",
+        "Minimum_Air_Temperature_C",
+        "Maximum_Air_Temperature_C",
+        "Average_Wall_Temperature_C",
+        "Heat_Transfer_Rate_W"
+      ],
+      "shared_targets": [
+        "Average_Air_Temperature_C",
+        "Minimum_Air_Temperature_C",
+        "Maximum_Air_Temperature_C",
+        "Heat_Transfer_Rate_W",
+        "Average_Wall_Temperature_C"
+      ],
+      "shared_expected_features": [
+        "Material",
+        "Wall_Thickness_m",
+        "External_Temperature_C",
+        "Initial_Air_Temperature_C",
+        "Wind_Speed_m_s"
+      ],
+      "exact_row_overlap": 36,
+      "shared_condition_key_columns": [
+        "Material",
+        "Wall_Thickness_m",
+        "External_Temperature_C",
+        "Initial_Air_Temperature_C"
+      ],
+      "shared_condition_tuple_overlap": 36,
+      "case_id_overlap": null,
+      "material_name_intersection": [
+        "Aluminum",
+        "Concrete",
+        "EPS"
+      ]
+    },
+    {
+      "left": "ladakh_shelter_ml_dataset_63_cases.csv",
+      "right": "ladakh_shelter_2000_batch4_physics_informed_dataset.csv",
+      "identical_schema": false,
+      "left_only_columns": [
+        "Solar_Radiation_kWh_m2_year"
+      ],
+      "right_only_columns": [
+        "Case_ID",
+        "Material_Category",
+        "Thermal_Conductivity_W_mK",
+        "Density_kg_m3",
+        "Specific_Heat_J_kgK",
+        "Shelter_Length_m",
+        "Shelter_Width_m",
+        "Shelter_Height_m",
+        "Opening_Area_m2",
+        "Window_Area_m2",
+        "Door_Area_m2",
+        "Orientation_deg",
+        "Solar_Radiation_W_m2",
+        "Daily_Solar_Energy_kWh_m2",
+        "Relative_Humidity_percent",
+        "Simulation_Duration_h",
+        "Time_Step_min",
+        "Minimum_Wall_Temperature_C",
+        "Maximum_Wall_Temperature_C",
+        "Average_Heat_Flux_W_m2",
+        "Maximum_Heat_Flux_W_m2",
+        "Solar_Heat_Input_W",
+        "Total_Heat_Transferred_Wh",
+        "Indoor_Temperature_Rise_C",
+        "Thermal_Energy_Loss_Wh",
+        "Data_Type",
+        "CFD_Reference",
+        "Climate_Data_Source",
+        "Material_Data_Source",
+        "Surrogate_Method",
+        "Batch"
+      ],
+      "common_columns": [
+        "Material",
+        "Wall_Thickness_m",
+        "External_Temperature_C",
+        "Initial_Air_Temperature_C",
+        "Wind_Speed_m_s",
+        "Average_Air_Temperature_C",
+        "Minimum_Air_Temperature_C",
+        "Maximum_Air_Temperature_C",
+        "Average_Wall_Temperature_C",
+        "Heat_Transfer_Rate_W"
+      ],
+      "shared_targets": [
+        "Average_Air_Temperature_C",
+        "Minimum_Air_Temperature_C",
+        "Maximum_Air_Temperature_C",
+        "Heat_Transfer_Rate_W",
+        "Average_Wall_Temperature_C"
+      ],
+      "shared_expected_features": [
+        "Material",
+        "Wall_Thickness_m",
+        "External_Temperature_C",
+        "Initial_Air_Temperature_C",
+        "Wind_Speed_m_s"
+      ],
+      "exact_row_overlap": null,
+      "shared_condition_key_columns": [
+        "Material",
+        "Wall_Thickness_m",
+        "External_Temperature_C",
+        "Initial_Air_Temperature_C"
+      ],
+      "shared_condition_tuple_overlap": 0,
+      "case_id_overlap": null,
+      "material_name_intersection": [
+        "Aluminum",
+        "Concrete"
+      ]
+    },
+    {
+      "left": "ladakh_shelter_ml_dataset_updated (1).csv",
+      "right": "ladakh_shelter_2000_batch4_physics_informed_dataset.csv",
+      "identical_schema": false,
+      "left_only_columns": [
+        "Solar_Radiation_kWh_m2_year"
+      ],
+      "right_only_columns": [
+        "Case_ID",
+        "Material_Category",
+        "Thermal_Conductivity_W_mK",
+        "Density_kg_m3",
+        "Specific_Heat_J_kgK",
+        "Shelter_Length_m",
+        "Shelter_Width_m",
+        "Shelter_Height_m",
+        "Opening_Area_m2",
+        "Window_Area_m2",
+        "Door_Area_m2",
+        "Orientation_deg",
+        "Solar_Radiation_W_m2",
+        "Daily_Solar_Energy_kWh_m2",
+        "Relative_Humidity_percent",
+        "Simulation_Duration_h",
+        "Time_Step_min",
+        "Minimum_Wall_Temperature_C",
+        "Maximum_Wall_Temperature_C",
+        "Average_Heat_Flux_W_m2",
+        "Maximum_Heat_Flux_W_m2",
+        "Solar_Heat_Input_W",
+        "Total_Heat_Transferred_Wh",
+        "Indoor_Temperature_Rise_C",
+        "Thermal_Energy_Loss_Wh",
+        "Data_Type",
+        "CFD_Reference",
+        "Climate_Data_Source",
+        "Material_Data_Source",
+        "Surrogate_Method",
+        "Batch"
+      ],
+      "common_columns": [
+        "Material",
+        "Wall_Thickness_m",
+        "External_Temperature_C",
+        "Initial_Air_Temperature_C",
+        "Wind_Speed_m_s",
+        "Average_Air_Temperature_C",
+        "Minimum_Air_Temperature_C",
+        "Maximum_Air_Temperature_C",
+        "Average_Wall_Temperature_C",
+        "Heat_Transfer_Rate_W"
+      ],
+      "shared_targets": [
+        "Average_Air_Temperature_C",
+        "Minimum_Air_Temperature_C",
+        "Maximum_Air_Temperature_C",
+        "Heat_Transfer_Rate_W",
+        "Average_Wall_Temperature_C"
+      ],
+      "shared_expected_features": [
+        "Material",
+        "Wall_Thickness_m",
+        "External_Temperature_C",
+        "Initial_Air_Temperature_C",
+        "Wind_Speed_m_s"
+      ],
+      "exact_row_overlap": null,
+      "shared_condition_key_columns": [
+        "Material",
+        "Wall_Thickness_m",
+        "External_Temperature_C",
+        "Initial_Air_Temperature_C"
+      ],
+      "shared_condition_tuple_overlap": 0,
+      "case_id_overlap": null,
+      "material_name_intersection": [
+        "Aluminum",
+        "Concrete"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,806 @@
+{
+  "workbooks": [
+    {
+      "filename": "ladakh_shelter_1500_batch2_physics_informed_dataset.xlsx",
+      "full_path": "D:\\THERMOSHELTER-final(2)\\THERMOSHELTER\\ladakh_shelter_1500_batch2_physics_informed_dataset.xlsx",
+      "sheets": [
+        {
+          "sheet_name": "Design_Cases_Batch2_1500",
+          "data_rows": 1500,
+          "column_count": 42,
+          "columns": [
+            "Case_ID",
+            "Material",
+            "Material_Category",
+            "Thermal_Conductivity_W_mK",
+            "Density_kg_m3",
+            "Specific_Heat_J_kgK",
+            "Wall_Thickness_m",
+            "Shelter_Length_m",
+            "Shelter_Width_m",
+            "Shelter_Height_m",
+            "Opening_Area_m2",
+            "Window_Area_m2",
+            "Door_Area_m2",
+            "Orientation_deg",
+            "External_Temperature_C",
+            "Initial_Air_Temperature_C",
+            "Solar_Radiation_W_m2",
+            "Daily_Solar_Energy_kWh_m2",
+            "Wind_Speed_m_s",
+            "Relative_Humidity_percent",
+            "Simulation_Duration_h",
+            "Time_Step_min",
+            "Average_Air_Temperature_C",
+            "Minimum_Air_Temperature_C",
+            "Maximum_Air_Temperature_C",
+            "Average_Wall_Temperature_C",
+            "Minimum_Wall_Temperature_C",
+            "Maximum_Wall_Temperature_C",
+            "Heat_Transfer_Rate_W",
+            "Average_Heat_Flux_W_m2",
+            "Maximum_Heat_Flux_W_m2",
+            "Solar_Heat_Input_W",
+            "Total_Heat_Transferred_Wh",
+            "Indoor_Temperature_Rise_C",
+            "Thermal_Energy_Loss_Wh",
+            "Data_Type",
+            "CFD_Reference",
+            "Climate_Data_Source",
+            "Material_Data_Source",
+            "Surrogate_Method",
+            "Batch",
+            "Recommended_Split"
+          ]
+        },
+        {
+          "sheet_name": "CFD_Reference_Cases",
+          "data_rows": 3,
+          "column_count": 9,
+          "columns": [
+            "Material",
+            "Thermal_Conductivity_W_mK",
+            "Wall_Thickness_m",
+            "External_Temperature_C",
+            "Initial_Air_Temperature_C",
+            "Average_Air_Temperature_C",
+            "Average_Wall_Temperature_C",
+            "Heat_Transfer_Rate_W",
+            "Data_Type"
+          ]
+        },
+        {
+          "sheet_name": "Calibration_Validation",
+          "data_rows": 3,
+          "column_count": 11,
+          "columns": [
+            "Material",
+            "k",
+            "Q_actual",
+            "Q_model",
+            "Q_err_pct",
+            "Tair_actual",
+            "Tair_model",
+            "Tair_err_C",
+            "Twall_actual",
+            "Twall_model",
+            "Twall_err_C"
+          ]
+        },
+        {
+          "sheet_name": "Transient_24h_Subset",
+          "data_rows": 1440,
+          "column_count": 9,
+          "columns": [
+            "Case_ID",
+            "Hour",
+            "Outdoor_Temperature_C",
+            "Solar_Radiation_W_m2",
+            "Wind_Speed_m_s",
+            "Indoor_Temperature_C",
+            "Wall_Temperature_C",
+            "Heat_Transfer_Rate_W",
+            "Solar_Heat_Input_W"
+          ]
+        },
+        {
+          "sheet_name": "Train_Val_Test_Split",
+          "data_rows": 1500,
+          "column_count": 2,
+          "columns": [
+            "Case_ID",
+            "Recommended_Split"
+          ]
+        }
+      ],
+      "detected_hourly_sheet": "Transient_24h_Subset",
+      "detected_design_input_sheet": "Design_Cases_Batch2_1500",
+      "detected_split_sheet": "Train_Val_Test_Split",
+      "hourly_row_count": 1440,
+      "hourly_case_count": 60,
+      "hourly_Case_ID_range": [
+        "CASE_01538",
+        "CASE_02966"
+      ],
+      "hourly_rows_by_split": {
+        "train": 888,
+        "validation": 288,
+        "test": 264
+      },
+      "hourly_cases_by_split": {
+        "train": 37,
+        "validation": 12,
+        "test": 11
+      },
+      "material_case_counts": {
+        "Aerated concrete / AAC": 10,
+        "Rock wool / mineral wool": 9,
+        "EPS insulation": 10,
+        "Concrete": 7,
+        "Wood / timber": 8,
+        "Aluminum": 5,
+        "Composite insulated wall": 9,
+        "Polyurethane foam (PU)": 1,
+        "Brick": 1
+      },
+      "design_sheet_row_count": 1500,
+      "split_sheet_row_count": 1500
+    },
+    {
+      "filename": "ladakh_shelter_1500_batch3_physics_informed_dataset.xlsx",
+      "full_path": "D:\\THERMOSHELTER-final(2)\\THERMOSHELTER\\ladakh_shelter_1500_batch3_physics_informed_dataset.xlsx",
+      "sheets": [
+        {
+          "sheet_name": "Design_Cases_Batch3_1500",
+          "data_rows": 1500,
+          "column_count": 42,
+          "columns": [
+            "Case_ID",
+            "Material",
+            "Material_Category",
+            "Thermal_Conductivity_W_mK",
+            "Density_kg_m3",
+            "Specific_Heat_J_kgK",
+            "Wall_Thickness_m",
+            "Shelter_Length_m",
+            "Shelter_Width_m",
+            "Shelter_Height_m",
+            "Opening_Area_m2",
+            "Window_Area_m2",
+            "Door_Area_m2",
+            "Orientation_deg",
+            "External_Temperature_C",
+            "Initial_Air_Temperature_C",
+            "Solar_Radiation_W_m2",
+            "Daily_Solar_Energy_kWh_m2",
+            "Wind_Speed_m_s",
+            "Relative_Humidity_percent",
+            "Simulation_Duration_h",
+            "Time_Step_min",
+            "Average_Air_Temperature_C",
+            "Minimum_Air_Temperature_C",
+            "Maximum_Air_Temperature_C",
+            "Average_Wall_Temperature_C",
+            "Minimum_Wall_Temperature_C",
+            "Maximum_Wall_Temperature_C",
+            "Heat_Transfer_Rate_W",
+            "Average_Heat_Flux_W_m2",
+            "Maximum_Heat_Flux_W_m2",
+            "Solar_Heat_Input_W",
+            "Total_Heat_Transferred_Wh",
+            "Indoor_Temperature_Rise_C",
+            "Thermal_Energy_Loss_Wh",
+            "Data_Type",
+            "CFD_Reference",
+            "Climate_Data_Source",
+            "Material_Data_Source",
+            "Surrogate_Method",
+            "Batch",
+            "Recommended_Split"
+          ]
+        },
+        {
+          "sheet_name": "CFD_Reference_Cases",
+          "data_rows": 3,
+          "column_count": 9,
+          "columns": [
+            "Material",
+            "Thermal_Conductivity_W_mK",
+            "Wall_Thickness_m",
+            "External_Temperature_C",
+            "Initial_Air_Temperature_C",
+            "Average_Air_Temperature_C",
+            "Average_Wall_Temperature_C",
+            "Heat_Transfer_Rate_W",
+            "Data_Type"
+          ]
+        },
+        {
+          "sheet_name": "Calibration_Validation",
+          "data_rows": 3,
+          "column_count": 11,
+          "columns": [
+            "Material",
+            "k",
+            "Q_actual",
+            "Q_model",
+            "Q_err_pct",
+            "Tair_actual",
+            "Tair_model",
+            "Tair_err_C",
+            "Twall_actual",
+            "Twall_model",
+            "Twall_err_C"
+          ]
+        },
+        {
+          "sheet_name": "Transient_24h_Subset",
+          "data_rows": 1440,
+          "column_count": 9,
+          "columns": [
+            "Case_ID",
+            "Hour",
+            "Outdoor_Temperature_C",
+            "Solar_Radiation_W_m2",
+            "Wind_Speed_m_s",
+            "Indoor_Temperature_C",
+            "Wall_Temperature_C",
+            "Heat_Transfer_Rate_W",
+            "Solar_Heat_Input_W"
+          ]
+        },
+        {
+          "sheet_name": "Train_Val_Test_Split",
+          "data_rows": 1500,
+          "column_count": 2,
+          "columns": [
+            "Case_ID",
+            "Recommended_Split"
+          ]
+        }
+      ],
+      "detected_hourly_sheet": "Transient_24h_Subset",
+      "detected_design_input_sheet": "Design_Cases_Batch3_1500",
+      "detected_split_sheet": "Train_Val_Test_Split",
+      "hourly_row_count": 1440,
+      "hourly_case_count": 60,
+      "hourly_Case_ID_range": [
+        "CASE_03061",
+        "CASE_04441"
+      ],
+      "hourly_rows_by_split": {
+        "test": 264,
+        "train": 816,
+        "validation": 360
+      },
+      "hourly_cases_by_split": {
+        "test": 11,
+        "train": 34,
+        "validation": 15
+      },
+      "material_case_counts": {
+        "Brick": 6,
+        "Rock wool / mineral wool": 8,
+        "Composite insulated wall": 8,
+        "Concrete": 5,
+        "Wood / timber": 10,
+        "EPS insulation": 9,
+        "Aluminum": 2,
+        "Aerated concrete / AAC": 9,
+        "Polyurethane foam (PU)": 3
+      },
+      "design_sheet_row_count": 1500,
+      "split_sheet_row_count": 1500
+    },
+    {
+      "filename": "ladakh_shelter_1500_physics_informed_dataset.xlsx",
+      "full_path": "D:\\THERMOSHELTER-final(2)\\THERMOSHELTER\\ladakh_shelter_1500_physics_informed_dataset.xlsx",
+      "sheets": [
+        {
+          "sheet_name": "Design_Cases_1500",
+          "data_rows": 1500,
+          "column_count": 41,
+          "columns": [
+            "Case_ID",
+            "Material",
+            "Material_Category",
+            "Thermal_Conductivity_W_mK",
+            "Density_kg_m3",
+            "Specific_Heat_J_kgK",
+            "Wall_Thickness_m",
+            "Shelter_Length_m",
+            "Shelter_Width_m",
+            "Shelter_Height_m",
+            "Opening_Area_m2",
+            "Window_Area_m2",
+            "Door_Area_m2",
+            "Orientation_deg",
+            "External_Temperature_C",
+            "Initial_Air_Temperature_C",
+            "Solar_Radiation_W_m2",
+            "Daily_Solar_Energy_kWh_m2",
+            "Wind_Speed_m_s",
+            "Relative_Humidity_percent",
+            "Simulation_Duration_h",
+            "Time_Step_min",
+            "Average_Air_Temperature_C",
+            "Minimum_Air_Temperature_C",
+            "Maximum_Air_Temperature_C",
+            "Average_Wall_Temperature_C",
+            "Minimum_Wall_Temperature_C",
+            "Maximum_Wall_Temperature_C",
+            "Heat_Transfer_Rate_W",
+            "Average_Heat_Flux_W_m2",
+            "Maximum_Heat_Flux_W_m2",
+            "Solar_Heat_Input_W",
+            "Total_Heat_Transferred_Wh",
+            "Indoor_Temperature_Rise_C",
+            "Thermal_Energy_Loss_Wh",
+            "Data_Type",
+            "CFD_Reference",
+            "Climate_Data_Source",
+            "Material_Data_Source",
+            "Surrogate_Method",
+            "Recommended_Split"
+          ]
+        },
+        {
+          "sheet_name": "CFD_Reference_Cases",
+          "data_rows": 3,
+          "column_count": 10,
+          "columns": [
+            "Material",
+            "Thermal_Conductivity_W_mK",
+            "Wall_Thickness_m",
+            "External_Temperature_C",
+            "Initial_Air_Temperature_C",
+            "Average_Air_Temperature_C",
+            "Average_Wall_Temperature_C",
+            "Heat_Transfer_Rate_W",
+            "Data_Type",
+            "Source"
+          ]
+        },
+        {
+          "sheet_name": "Calibration_Validation",
+          "data_rows": 3,
+          "column_count": 11,
+          "columns": [
+            "Material",
+            "k",
+            "Q_actual",
+            "Q_model",
+            "Q_err_pct",
+            "Tair_actual",
+            "Tair_model",
+            "Tair_err_C",
+            "Twall_actual",
+            "Twall_model",
+            "Twall_err_C"
+          ]
+        },
+        {
+          "sheet_name": "Transient_24h_Subset",
+          "data_rows": 1440,
+          "column_count": 9,
+          "columns": [
+            "Case_ID",
+            "Hour",
+            "Outdoor_Temperature_C",
+            "Solar_Radiation_W_m2",
+            "Wind_Speed_m_s",
+            "Indoor_Temperature_C",
+            "Wall_Temperature_C",
+            "Heat_Transfer_Rate_W",
+            "Solar_Heat_Input_W"
+          ]
+        },
+        {
+          "sheet_name": "Train_Val_Test_Split",
+          "data_rows": 1500,
+          "column_count": 2,
+          "columns": [
+            "Case_ID",
+            "Recommended_Split"
+          ]
+        }
+      ],
+      "detected_hourly_sheet": "Transient_24h_Subset",
+      "detected_design_input_sheet": "Design_Cases_1500",
+      "detected_split_sheet": "Train_Val_Test_Split",
+      "hourly_row_count": 1440,
+      "hourly_case_count": 60,
+      "hourly_Case_ID_range": [
+        "CASE_00010",
+        "CASE_01464"
+      ],
+      "hourly_rows_by_split": {
+        "validation": 168,
+        "train": 984,
+        "test": 288
+      },
+      "hourly_cases_by_split": {
+        "validation": 7,
+        "train": 41,
+        "test": 12
+      },
+      "material_case_counts": {
+        "Concrete": 7,
+        "Polyurethane foam (PU)": 8,
+        "Composite insulated wall": 11,
+        "EPS insulation": 9,
+        "Brick": 9,
+        "Wood / timber": 2,
+        "Rock wool / mineral wool": 5,
+        "Aerated concrete / AAC": 6,
+        "Aluminum": 3
+      },
+      "design_sheet_row_count": 1500,
+      "split_sheet_row_count": 1500
+    },
+    {
+      "filename": "ladakh_shelter_2000_batch4_physics_informed_dataset.xlsx",
+      "full_path": "D:\\THERMOSHELTER-final(2)\\THERMOSHELTER\\ladakh_shelter_2000_batch4_physics_informed_dataset.xlsx",
+      "sheets": [
+        {
+          "sheet_name": "Design_Cases_Batch4_2000",
+          "data_rows": 2000,
+          "column_count": 42,
+          "columns": [
+            "Case_ID",
+            "Material",
+            "Material_Category",
+            "Thermal_Conductivity_W_mK",
+            "Density_kg_m3",
+            "Specific_Heat_J_kgK",
+            "Wall_Thickness_m",
+            "Shelter_Length_m",
+            "Shelter_Width_m",
+            "Shelter_Height_m",
+            "Opening_Area_m2",
+            "Window_Area_m2",
+            "Door_Area_m2",
+            "Orientation_deg",
+            "External_Temperature_C",
+            "Initial_Air_Temperature_C",
+            "Solar_Radiation_W_m2",
+            "Daily_Solar_Energy_kWh_m2",
+            "Wind_Speed_m_s",
+            "Relative_Humidity_percent",
+            "Simulation_Duration_h",
+            "Time_Step_min",
+            "Average_Air_Temperature_C",
+            "Minimum_Air_Temperature_C",
+            "Maximum_Air_Temperature_C",
+            "Average_Wall_Temperature_C",
+            "Minimum_Wall_Temperature_C",
+            "Maximum_Wall_Temperature_C",
+            "Heat_Transfer_Rate_W",
+            "Average_Heat_Flux_W_m2",
+            "Maximum_Heat_Flux_W_m2",
+            "Solar_Heat_Input_W",
+            "Total_Heat_Transferred_Wh",
+            "Indoor_Temperature_Rise_C",
+            "Thermal_Energy_Loss_Wh",
+            "Data_Type",
+            "CFD_Reference",
+            "Climate_Data_Source",
+            "Material_Data_Source",
+            "Surrogate_Method",
+            "Batch",
+            "Recommended_Split"
+          ]
+        },
+        {
+          "sheet_name": "CFD_Reference_Cases",
+          "data_rows": 3,
+          "column_count": 9,
+          "columns": [
+            "Material",
+            "Thermal_Conductivity_W_mK",
+            "Wall_Thickness_m",
+            "External_Temperature_C",
+            "Initial_Air_Temperature_C",
+            "Average_Air_Temperature_C",
+            "Average_Wall_Temperature_C",
+            "Heat_Transfer_Rate_W",
+            "Data_Type"
+          ]
+        },
+        {
+          "sheet_name": "Calibration_Validation",
+          "data_rows": 3,
+          "column_count": 11,
+          "columns": [
+            "Material",
+            "k",
+            "Q_actual",
+            "Q_model",
+            "Q_err_pct",
+            "Tair_actual",
+            "Tair_model",
+            "Tair_err_C",
+            "Twall_actual",
+            "Twall_model",
+            "Twall_err_C"
+          ]
+        },
+        {
+          "sheet_name": "Transient_24h_Subset",
+          "data_rows": 1920,
+          "column_count": 9,
+          "columns": [
+            "Case_ID",
+            "Hour",
+            "Outdoor_Temperature_C",
+            "Solar_Radiation_W_m2",
+            "Wind_Speed_m_s",
+            "Indoor_Temperature_C",
+            "Wall_Temperature_C",
+            "Heat_Transfer_Rate_W",
+            "Solar_Heat_Input_W"
+          ]
+        },
+        {
+          "sheet_name": "Train_Val_Test_Split",
+          "data_rows": 2000,
+          "column_count": 2,
+          "columns": [
+            "Case_ID",
+            "Recommended_Split"
+          ]
+        }
+      ],
+      "detected_hourly_sheet": "Transient_24h_Subset",
+      "detected_design_input_sheet": "Design_Cases_Batch4_2000",
+      "detected_split_sheet": "Train_Val_Test_Split",
+      "hourly_row_count": 1920,
+      "hourly_case_count": 80,
+      "hourly_Case_ID_range": [
+        "CASE_04554",
+        "CASE_06492"
+      ],
+      "hourly_rows_by_split": {
+        "test": 264,
+        "validation": 288,
+        "train": 1368
+      },
+      "hourly_cases_by_split": {
+        "test": 11,
+        "validation": 12,
+        "train": 57
+      },
+      "material_case_counts": {
+        "Concrete": 8,
+        "Aluminum": 5,
+        "Wood / timber": 12,
+        "Rock wool / mineral wool": 8,
+        "Composite insulated wall": 8,
+        "Aerated concrete / AAC": 8,
+        "Brick": 15,
+        "Polyurethane foam (PU)": 6,
+        "EPS insulation": 10
+      },
+      "design_sheet_row_count": 2000,
+      "split_sheet_row_count": 2000
+    }
+  ],
+  "hourly_sheets": [
+    "Transient_24h_Subset"
+  ],
+  "hourly_columns": [
+    "Case_ID",
+    "Hour",
+    "Outdoor_Temperature_C",
+    "Solar_Radiation_W_m2",
+    "Wind_Speed_m_s",
+    "Indoor_Temperature_C",
+    "Wall_Temperature_C",
+    "Heat_Transfer_Rate_W",
+    "Solar_Heat_Input_W"
+  ],
+  "combined_hourly_column_names": {
+    "Hour": "Hour",
+    "Outdoor_Temperature_C": "Outdoor_Temperature_C",
+    "Solar_Radiation_W_m2": "Hourly_Solar_Radiation_W_m2",
+    "Wind_Speed_m_s": "Hourly_Wind_Speed_m_s",
+    "Indoor_Temperature_C": "Indoor_Temperature_C",
+    "Wall_Temperature_C": "Wall_Temperature_C",
+    "Heat_Transfer_Rate_W": "Hourly_Heat_Transfer_Rate_W",
+    "Solar_Heat_Input_W": "Hourly_Solar_Heat_Input_W"
+  },
+  "case_input_features": [
+    "Material",
+    "Material_Category",
+    "Thermal_Conductivity_W_mK",
+    "Density_kg_m3",
+    "Specific_Heat_J_kgK",
+    "Wall_Thickness_m",
+    "Shelter_Length_m",
+    "Shelter_Width_m",
+    "Shelter_Height_m",
+    "Opening_Area_m2",
+    "Window_Area_m2",
+    "Door_Area_m2",
+    "Orientation_deg",
+    "External_Temperature_C",
+    "Initial_Air_Temperature_C",
+    "Solar_Radiation_W_m2",
+    "Daily_Solar_Energy_kWh_m2",
+    "Wind_Speed_m_s",
+    "Relative_Humidity_percent",
+    "Simulation_Duration_h",
+    "Time_Step_min"
+  ],
+  "hourly_climate_columns": [
+    "Outdoor_Temperature_C",
+    "Solar_Radiation_W_m2",
+    "Wind_Speed_m_s"
+  ],
+  "hourly_target": "Indoor_Temperature_C",
+  "hourly_outputs_excluded_from_model_inputs": [
+    "Wall_Temperature_C",
+    "Heat_Transfer_Rate_W",
+    "Solar_Heat_Input_W"
+  ],
+  "case_summary_outputs_excluded_from_model_inputs": [
+    "Average_Air_Temperature_C",
+    "Minimum_Air_Temperature_C",
+    "Maximum_Air_Temperature_C",
+    "Average_Wall_Temperature_C",
+    "Minimum_Wall_Temperature_C",
+    "Maximum_Wall_Temperature_C",
+    "Heat_Transfer_Rate_W",
+    "Average_Heat_Flux_W_m2",
+    "Maximum_Heat_Flux_W_m2",
+    "Solar_Heat_Input_W",
+    "Total_Heat_Transferred_Wh",
+    "Indoor_Temperature_Rise_C",
+    "Thermal_Energy_Loss_Wh"
+  ],
+  "combined_hourly_rows": 6240,
+  "unique_sequences": 260,
+  "rows_per_sequence": {
+    "min": 24,
+    "max": 24
+  },
+  "split_case_counts": {
+    "test": 45,
+    "train": 169,
+    "validation": 46
+  },
+  "split_hourly_row_counts": {
+    "test": 1080,
+    "train": 4056,
+    "validation": 1104
+  },
+  "rounded_input_duplicate_groups_across_splits": [],
+  "duplicate_hourly_sequences": [],
+  "split_assignments_match_design_sheet": true,
+  "case_id_is_model_feature": false,
+  "dataset_type_counts_in_hourly_parent_cases": {
+    "PHYSICS_INFORMED_ESTIMATE": 260
+  },
+  "hourly_variable_ranges": {
+    "Hour": {
+      "min": 0.0,
+      "max": 23.0
+    },
+    "Outdoor_Temperature_C": {
+      "min": -29.41,
+      "max": 49.37
+    },
+    "Solar_Radiation_W_m2": {
+      "min": 0.0,
+      "max": 1331.4
+    },
+    "Wind_Speed_m_s": {
+      "min": 0.0,
+      "max": 13.62
+    },
+    "Indoor_Temperature_C": {
+      "min": -10.27,
+      "max": 34.26
+    },
+    "Wall_Temperature_C": {
+      "min": -26.2,
+      "max": 48.61
+    },
+    "Heat_Transfer_Rate_W": {
+      "min": -1126.502,
+      "max": 1956.208
+    },
+    "Solar_Heat_Input_W": {
+      "min": 0.0,
+      "max": 15032.73
+    }
+  },
+  "hour0_minus_initial_air_temperature_C": {
+    "min": -24.42,
+    "p50": -5.67,
+    "p95": 6.734999999999997,
+    "max": 11.979999999999999,
+    "mean_absolute": 7.354923076923077
+  },
+  "hourly_curve_average_minus_case_summary_average_C": {
+    "min": -4.651666666666667,
+    "p50": 0.6557083333333336,
+    "p95": 4.893791666666666,
+    "max": 6.652666666666666,
+    "mean_absolute": 1.7348820512820509
+  },
+  "hourly_curve_minimum_minus_case_summary_minimum_C": {
+    "min": -6.989999999999998,
+    "p50": -1.6350000000000002,
+    "p95": 2.4429999999999987,
+    "max": 5.02,
+    "mean_absolute": 2.2624615384615385
+  },
+  "hourly_curve_maximum_minus_case_summary_maximum_C": {
+    "min": -2.5500000000000007,
+    "p50": 2.6599999999999997,
+    "p95": 6.7044999999999995,
+    "max": 8.26,
+    "mean_absolute": 2.981692307692308
+  },
+  "rows_removed": 0,
+  "model_feature_columns": [
+    "Material",
+    "Material_Category",
+    "Thermal_Conductivity_W_mK",
+    "Density_kg_m3",
+    "Specific_Heat_J_kgK",
+    "Wall_Thickness_m",
+    "Shelter_Length_m",
+    "Shelter_Width_m",
+    "Shelter_Height_m",
+    "Opening_Area_m2",
+    "Window_Area_m2",
+    "Door_Area_m2",
+    "Orientation_deg",
+    "External_Temperature_C",
+    "Initial_Air_Temperature_C",
+    "Case_Solar_Radiation_W_m2",
+    "Daily_Solar_Energy_kWh_m2",
+    "Case_Wind_Speed_m_s",
+    "Relative_Humidity_percent",
+    "Simulation_Duration_h",
+    "Time_Step_min",
+    "Hour_sin",
+    "Hour_cos",
+    "Outdoor_Temperature_C",
+    "Hourly_Solar_Radiation_W_m2",
+    "Hourly_Wind_Speed_m_s"
+  ],
+  "model_feature_count": 26,
+  "categorical_features": [
+    "Material",
+    "Material_Category"
+  ],
+  "numeric_features": [
+    "Thermal_Conductivity_W_mK",
+    "Density_kg_m3",
+    "Specific_Heat_J_kgK",
+    "Wall_Thickness_m",
+    "Shelter_Length_m",
+    "Shelter_Width_m",
+    "Shelter_Height_m",
+    "Opening_Area_m2",
+    "Window_Area_m2",
+    "Door_Area_m2",
+    "Orientation_deg",
+    "External_Temperature_C",
+    "Initial_Air_Temperature_C",
+    "Case_Solar_Radiation_W_m2",
+    "Daily_Solar_Energy_kWh_m2",
+    "Case_Wind_Speed_m_s",
+    "Relative_Humidity_percent",
+    "Simulation_Duration_h",
+    "Time_Step_min",
+    "Hour_sin",
+    "Hour_cos",
+    "Outdoor_Temperature_C",
+    "Hourly_Solar_Radiation_W_m2",
+    "Hourly_Wind_Speed_m_s"
+  ]
+}
