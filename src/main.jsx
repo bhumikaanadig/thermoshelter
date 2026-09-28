@@ -752,24 +752,6 @@ function Design({s,materials,materialStatus,update,updateG,onRun,onOpenHourlySim
           </p>
         </div>
 
-        <div className="design-header-status">
-          <div className={`live-model-status ${predictionLoading ? 'running' : ''}`}>
-            <span></span>
-            {predictionLoading ? 'PREDICTION RUNNING' : 'DESIGN INPUTS READY'}
-          </div>
-          <div
-            className={`v3-api-status ${apiStatus.connected && apiStatus.modelLoaded ? 'connected' : 'disconnected'}`}
-            role="status"
-            aria-live="polite"
-          >
-            <span className="v3-api-status-dot" />
-            {apiStatus.checking
-              ? 'Checking THERMOSHELTER API…'
-              : apiStatus.connected && apiStatus.modelLoaded
-                ? <><span>API Connected</span><span>Summary Model Ready</span></>
-                : 'API Disconnected'}
-          </div>
-        </div>
       </div>
 
       <section className="panel saved-design-panel" aria-labelledby="saved-design-heading">
