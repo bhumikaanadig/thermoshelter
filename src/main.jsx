@@ -1778,14 +1778,14 @@ function Simulation({s,materials,prediction,loading,error,errorDetail,weatherPro
       </section>}
 
       {requestPayload&&<details className="hourly-input-disclosure">
-        <summary>View the 21 case inputs and 24 hourly weather points sent to the hourly model</summary>
+        <summary>View 21 model inputs, design context, and 24 hourly weather points sent to the hourly API</summary>
         <p>
           The static solar input is the forecast daily peak; daily solar energy is integrated from the 24 hourly radiation values. Temperature, wind and relative humidity case inputs are day means.
         </p>
-        <h3>21 shelter case inputs</h3>
+        <h3>21 model inputs and design context</h3>
         <dl className="hourly-case-inputs">
           {Object.entries(requestPayload.case_inputs).map(([name,value])=>(
-            <div key={name}><dt>{name}</dt><dd>{String(value)}</dd></div>
+            <div key={name}><dt>{name}</dt><dd>{typeof value === 'object' && value !== null ? JSON.stringify(value) : String(value)}</dd></div>
           ))}
         </dl>
         <h3>24 hourly weather inputs</h3>

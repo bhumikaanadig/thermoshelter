@@ -109,7 +109,12 @@ def main() -> None:
         "Solar_Radiation_W_m2", "Daily_Solar_Energy_kWh_m2", "Wind_Speed_m_s",
         "Relative_Humidity_percent", "Simulation_Duration_h", "Time_Step_min",
     }
-    assert len(case_inputs) == 21 and set(case_inputs) == expected_case_fields, set(case_inputs)
+    assert len(case_inputs) == 22 and set(case_inputs) == expected_case_fields | {"Design_Context"}, set(case_inputs)
+    assert case_inputs["Design_Context"] == {
+        "location": "Leh, Ladakh",
+        "occupants": 4,
+        "primary_material": "Stone",
+    }
     weather = hourly_request["hourly_climate"]
     assert len(weather) == 24 and [point["Hour"] for point in weather] == list(range(24))
     for field in ("Outdoor_Temperature_C", "Solar_Radiation_W_m2", "Wind_Speed_m_s"):
