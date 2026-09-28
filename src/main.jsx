@@ -435,8 +435,11 @@ function App(){
       });
     }catch(error){
       if(operationId!==v3PredictionRunId.current) return;
-      setV3PredictionError(message);
-      if(message==='VITE_API_BASE_URL is not configured.'){
+      const errorMessage = typeof error?.message === 'string' && error.message.trim()
+        ? error.message
+        : 'The thermal prediction could not be completed. Check the design inputs and try again.';
+      setV3PredictionError(errorMessage);
+      if(errorMessage==='VITE_API_BASE_URL is not configured.'){
         setApiStatus({checking:false,connected:false,modelLoaded:false});
       }
     }finally{
@@ -901,7 +904,7 @@ function Design({s,materials,materialStatus,update,updateG,onRun,onOpenHourlySim
             The summary model combines the selected primary material with the fixed insulation and concrete layers into effective composite inputs.
           </div>
           <p className="form-field-note">
-            Occupant count is saved with the design but is not one of the current summary or hourly model inputs.
+            Occupant count is sent as design context and saved; the current summary and hourly models do not use it as a model feature.
           </p>
 
           <button
@@ -989,7 +992,7 @@ function V3PredictionResults({prediction,error,diagnostics,onOpenHourlySimulatio
         </div>
 
         <details className="v3-input-summary">
-          <summary>View the 21 inputs sent to the summary model</summary>
+          <summary>View 21 model inputs and design context sent to the API</summary>
           <p className="v3-input-note">
             Initial_Air_Temperature_C currently uses the Design page’s Target indoor temperature control. There is no separate initial-air-temperature input yet.
           </p>
@@ -997,7 +1000,7 @@ function V3PredictionResults({prediction,error,diagnostics,onOpenHourlySimulatio
             {Object.entries(prediction.input_summary).map(([name,value])=>(
               <div key={name}>
                 <dt>{name}</dt>
-                <dd>{String(value)}</dd>
+                <dd>{typeof value === 'object' && value !== null ? JSON.stringify(value) : String(value)}</dd>
               </div>
             ))}
           </dl>
@@ -2260,7 +2263,7 @@ function Report({s,materials,prediction,predictionError,diagnostics,candidateEva
             <div><span>Shelter length</span><b>{s.geometry.length} m</b></div>
             <div><span>Shelter width</span><b>{s.geometry.width} m</b></div>
             <div><span>Shelter height</span><b>{s.geometry.height} m</b></div>
-            <div><span>Occupants · saved context, not a model input</span><b>{s.occupants}</b></div>
+            <div><span>Occupants · design context, not a model feature</span><b>{s.occupants}</b></div>
             <div><span>Window area</span><b>{s.geometry.windowArea} m²</b></div>
             <div><span>Door area</span><b>{s.geometry.doorArea} m²</b></div>
             <div><span>Orientation</span><b>{s.geometry.orientation}</b></div>

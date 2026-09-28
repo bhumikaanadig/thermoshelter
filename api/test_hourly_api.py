@@ -59,6 +59,11 @@ def main() -> None:
             "case_inputs": hourly_example["case_inputs"],
             "hourly_climate": hourly_example["hourly_climate"],
         }
+        hourly_request["case_inputs"]["Design_Context"] = {
+            "location": "Leh, Ladakh",
+            "occupants": 4,
+            "primary_material": "Stone",
+        }
         hourly = post_json(f"{base_url}/predict-hourly", hourly_request)
         changed_design_request = json.loads(json.dumps(hourly_request))
         changed_design_request["case_inputs"]["Shelter_Length_m"] = min(
@@ -144,7 +149,7 @@ def main() -> None:
     print("GET /health: existing V3 summary artifact loads")
     print("POST /predict: all six values are finite and match the saved V3 example")
     print("POST /predict-hourly: exactly 24 finite predictions for hours 0–23; matches held-out helper example")
-    print("POST /predict-hourly: request contains all 21 case inputs and 24 outdoor/solar/wind records")
+    print("POST /predict-hourly: request contains 21 model inputs, design context, and 24 outdoor/solar/wind records")
     print("POST /predict-hourly with changed shelter length: prediction changes")
     print("POST /predict-hourly with Wall_Thickness_m=0.45: prediction succeeds; unchanged value is reported as out of range")
     print("Unsupported category and incomplete weather profiles return HTTP 422")

@@ -1,9 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  buildV3Payload,
   buildV3OptimizationPayloads,
   diagnoseV3Payload,
   evaluateV3CandidatePayloads,
+  getApiErrorMessage,
+  getDisplayedOutdoorTemperatureForClimate,
 } from './api.js';
 
 const materials = {
@@ -18,15 +21,107 @@ const materials = {
 
 const climates = {
   leh: { name: 'Leh, Ladakh', mean: -5, amp: 9, solar: 850, wind: 12, humidity: 32 },
+  manali: { name: 'Manali, Himachal Pradesh', mean: 5, amp: 8, solar: 720, wind: 8, humidity: 55 },
+  srinagar: { name: 'Srinagar, Jammu & Kashmir', mean: 3, amp: 8, solar: 680, wind: 10, humidity: 65 },
   delhi: { name: 'Delhi, NCR', mean: 24, amp: 10, solar: 850, wind: 8, humidity: 55 },
 };
 
 const baseDesign = {
   location: 'leh',
+  occupants: 4,
   target: 18,
   geometry: { length: 5, width: 4.8, height: 2.8, orientation: 'S', windowArea: 2.4, doorArea: 1.8 },
   layers: ['stone', 'insulation', 'concrete'],
 };
+
+test('builds V3 requests from varied current inputs without clamping observed-range extrapolation', () => {
+  const scenarios = [
+    {
+      location: 'leh', target: 18, material: 'stone',
+      geometry: { length: 6, width: 5, height: 4, orientation: 'E', windowArea: 2.5, doorArea: 2 },
+    },
+    {
+      location: 'manali', target: 20, material: 'brick',
+      geometry: { length: 4, width: 3, height: 2.5, orientation: 'N', windowArea: 1.6, doorArea: 1.8 },
+    },
+    {
+      location: 'delhi', target: 22, material: 'concrete',
+      geometry: { length: 8, width: 6, height: 3, orientation: 'W', windowArea: 3.3, doorArea: 2 },
+    },
+    {
+      location: 'srinagar', target: 16.5, material: 'timber',
+      geometry: { length: 5.5, width: 4.2, height: 3.2, orientation: 'NW', windowArea: 2.8, doorArea: 2.2 },
+    },
+  ];
+
+  const payloads = scenarios.map((scenario) => {
+    const climate = climates[scenario.location];
+    const design = {
+      ...baseDesign,
+      location: scenario.location,
+      target: scenario.target,
+      geometry: scenario.geometry,
+      layers: [scenario.material, 'insulation', 'concrete'],
+    };
+    const payload = buildV3Payload(
+      design,
+      materials,
+      climates,
+      getDisplayedOutdoorTemperatureForClimate(climate),
+    );
+
+    assert.equal(payload.Shelter_Length_m, scenario.geometry.length);
+    assert.equal(payload.Shelter_Width_m, scenario.geometry.width);
+    assert.equal(payload.Shelter_Height_m, scenario.geometry.height);
+    assert.equal(payload.Window_Area_m2, scenario.geometry.windowArea);
+    assert.equal(payload.Door_Area_m2, scenario.geometry.doorArea);
+    assert.equal(payload.Opening_Area_m2, scenario.geometry.windowArea + scenario.geometry.doorArea);
+    assert.equal(payload.Orientation_deg, { N: 0, E: 90, W: 270, NW: 315 }[scenario.geometry.orientation]);
+    assert.equal(payload.Initial_Air_Temperature_C, scenario.target);
+    assert.equal(payload.External_Temperature_C, getDisplayedOutdoorTemperatureForClimate(climate));
+    assert.equal(payload.Solar_Radiation_W_m2, climate.solar);
+    assert.deepEqual(diagnoseV3Payload(payload).invalidNumericInputs, []);
+    assert.deepEqual(diagnoseV3Payload(payload).unsupportedCategories, []);
+    assert.equal(Object.keys(payload).length, 22);
+    assert.deepEqual(payload.Design_Context, {
+      location: climate.name,
+      occupants: 4,
+      primary_material: materials[scenario.material].name,
+    });
+    return payload;
+  });
+
+  assert.notEqual(payloads[0].Thermal_Conductivity_W_mK, payloads[1].Thermal_Conductivity_W_mK);
+  assert.notEqual(payloads[0].Initial_Air_Temperature_C, payloads[2].Initial_Air_Temperature_C);
+  assert.notEqual(payloads[0].External_Temperature_C, payloads[1].External_Temperature_C);
+  assert.ok(diagnoseV3Payload(payloads[0]).numericOutOfRange.some(({ field }) => field === 'Wall_Thickness_m'));
+  assert.ok(diagnoseV3Payload(payloads[0]).numericOutOfRange.some(({ field }) => field === 'Shelter_Height_m'));
+  assert.ok(diagnoseV3Payload(payloads[2]).numericOutOfRange.some(({ field }) => field === 'Shelter_Length_m'));
+  assert.ok(diagnoseV3Payload(payloads[2]).numericOutOfRange.some(({ field }) => field === 'Shelter_Width_m'));
+
+  const changedLength = buildV3Payload(
+    { ...baseDesign, geometry: { ...baseDesign.geometry, length: 7 } },
+    materials,
+    climates,
+    getDisplayedOutdoorTemperatureForClimate(climates.leh),
+  );
+  assert.equal(changedLength.Shelter_Length_m, 7);
+  assert.equal(changedLength.Design_Context.occupants, 4);
+  assert.ok(diagnoseV3Payload(changedLength).numericOutOfRange.some(({ field }) => field === 'Shelter_Length_m'));
+  assert.deepEqual(diagnoseV3Payload(changedLength).invalidNumericInputs, []);
+});
+
+test('turns FastAPI validation errors into useful field-specific UI messages', () => {
+  assert.equal(
+    getApiErrorMessage(422, {
+      detail: [{ loc: ['body', 'Shelter_Height_m'], msg: 'Input should be greater than 0' }],
+    }),
+    'Shelter_Height_m: Input should be greater than 0',
+  );
+  assert.equal(getApiErrorMessage(503, { detail: 'V3 inference is temporarily unavailable.' }),
+    'V3 inference is temporarily unavailable.');
+  assert.equal(getApiErrorMessage(502, {}), 'THERMOSHELTER API request failed (502).');
+});
 
 test('builds a transparent V3 search across materials, empirical thickness levels, and orientations', () => {
   const candidates = buildV3OptimizationPayloads(baseDesign, materials, climates);
@@ -52,7 +147,12 @@ test('builds a transparent V3 search across materials, empirical thickness level
   );
 
   for (const candidate of candidates) {
-    assert.equal(Object.keys(candidate.payload).length, 21);
+    assert.equal(Object.keys(candidate.payload).filter((field) => field !== 'Design_Context').length, 21);
+    assert.deepEqual(candidate.payload.Design_Context, {
+      location: climates.leh.name,
+      occupants: 4,
+      primary_material: materials[candidate.configuration.layers[0]].name,
+    });
     assert.deepEqual(diagnoseV3Payload(candidate.payload), {
       numericOutOfRange: [],
       invalidNumericInputs: [],

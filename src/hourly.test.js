@@ -10,7 +10,7 @@ const materials = {
 };
 
 const climates = {
-  leh: { mean: -5, amp: 9, solar: 850, wind: 12, humidity: 32 },
+  leh: { name: 'Leh, Ladakh', mean: -5, amp: 9, solar: 850, wind: 12, humidity: 32 },
 };
 
 function fakeForecastBody() {
@@ -73,7 +73,7 @@ test('fetches a complete real-source-shaped local-day profile without filling va
   );
 });
 
-test('maps exactly 21 case inputs and 24 hourly weather rows; geometry changes the request', () => {
+test('maps 21 model inputs plus design context and 24 hourly weather rows; geometry changes the request', () => {
   const hourlyClimate = Array.from({ length: 24 }, (_, Hour) => ({
     Hour,
     Outdoor_Temperature_C: -15 + Hour / 4,
@@ -92,6 +92,7 @@ test('maps exactly 21 case inputs and 24 hourly weather rows; geometry changes t
   };
   const design = {
     location: 'leh',
+    occupants: 4,
     target: 18,
     geometry: { length: 5, width: 4.8, height: 2.8, orientation: 'S', windowArea: 2.4, doorArea: 1.8 },
     layers: ['stone', 'insulation', 'concrete'],
@@ -102,7 +103,12 @@ test('maps exactly 21 case inputs and 24 hourly weather rows; geometry changes t
     geometry: { ...design.geometry, length: 5.5 },
   }, materials, climates, weatherProfile);
 
-  assert.equal(Object.keys(request.case_inputs).length, 21);
+  assert.equal(Object.keys(request.case_inputs).length, 22);
+  assert.deepEqual(request.case_inputs.Design_Context, {
+    location: 'Leh, Ladakh',
+    occupants: 4,
+    primary_material: 'Stone',
+  });
   assert.equal(request.case_inputs.Simulation_Duration_h, 24);
   assert.equal(request.case_inputs.Time_Step_min, 30);
   assert.equal(request.case_inputs.External_Temperature_C, -12.125);

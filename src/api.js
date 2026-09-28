@@ -26,6 +26,20 @@ const V3_EMPIRICAL_SEARCH_LEVELS = {
 };
 const ORIENTATION_OPTIONS = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
 
+export function getApiErrorMessage(status, body) {
+  const validationDetails = Array.isArray(body?.detail)
+    ? body.detail.map((issue) => {
+      const field = Array.isArray(issue?.loc)
+        ? issue.loc.filter((part) => part !== 'body').join('.')
+        : '';
+      const message = typeof issue?.msg === 'string' ? issue.msg : '';
+      return [field, message].filter(Boolean).join(': ');
+    }).filter(Boolean).join('; ')
+    : '';
+  const detail = typeof body?.detail === 'string' ? body.detail : validationDetails;
+  return detail || `THERMOSHELTER API request failed (${status}).`;
+}
+
 async function requestJson(path, options = {}) {
   if (!API_BASE_URL) {
     throw new Error('VITE_API_BASE_URL is not configured.');
@@ -53,8 +67,7 @@ async function requestJson(path, options = {}) {
   }
 
   if (!response.ok) {
-    const detail = typeof body?.detail === 'string' ? body.detail : null;
-    const error = new Error(detail || `THERMOSHELTER API request failed (${response.status}).`);
+    const error = new Error(getApiErrorMessage(response.status, body));
     error.status = response.status;
     throw error;
   }
@@ -224,7 +237,7 @@ export function diagnoseV3Payload(payload) {
   return { numericOutOfRange, invalidNumericInputs, unsupportedCategories };
 }
 
-/** Convert the current Design form state into the saved V3 model's 21 inputs. */
+/** Convert current Design values to 21 V3 features plus raw context for traceability. */
 export function buildV3Payload(design, materialLibrary, climateProfiles, displayedOutdoorTemperature) {
   const climate = climateProfiles[design.location];
   const geometry = design.geometry;
@@ -261,6 +274,13 @@ export function buildV3Payload(design, materialLibrary, climateProfiles, display
   const primaryLayer = materialLibrary[design.layers[0]];
   const openingArea = geometry.windowArea + geometry.doorArea;
   const dailySolarEnergy = climate.solar * 0.006; // 6 equivalent full-sun hours, kWh/m²/day.
+  const designContext = Number.isFinite(design.occupants)
+    ? {
+      location: climate.name,
+      occupants: design.occupants,
+      primary_material: primaryLayer.name,
+    }
+    : null;
 
   return {
     Material: selectedLayers.length > 1 ? 'Composite insulated wall' : primaryLayer.name,
@@ -286,6 +306,7 @@ export function buildV3Payload(design, materialLibrary, climateProfiles, display
     Relative_Humidity_percent: climate.humidity,
     Simulation_Duration_h: 24,
     Time_Step_min: 30,
+    ...(designContext ? { Design_Context: designContext } : {}),
   };
 }
 

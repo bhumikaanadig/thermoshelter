@@ -95,6 +95,23 @@ NUMERIC_FIELDS = {
 }
 
 
+class DesignContext(BaseModel):
+    """Raw form values carried for traceability, separate from model features."""
+
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    location: str = Field(min_length=1, max_length=128)
+    occupants: Positive
+    primary_material: str = Field(min_length=1, max_length=128)
+
+    @model_validator(mode="before")
+    @classmethod
+    def reject_boolean_occupants(cls, value: object) -> object:
+        if isinstance(value, dict) and isinstance(value.get("occupants"), bool):
+            raise ValueError("occupants must be a finite number, not a boolean.")
+        return value
+
+
 class ShelterInput(BaseModel):
     """All required V3 inputs with broad physical sanity limits."""
 
@@ -121,6 +138,7 @@ class ShelterInput(BaseModel):
     Relative_Humidity_percent: Annotated[Finite, Field(ge=0, le=100)]
     Simulation_Duration_h: Annotated[Positive, Field(le=24)]
     Time_Step_min: Annotated[Positive, Field(le=60)]
+    Design_Context: DesignContext | None = None
 
     @model_validator(mode="before")
     @classmethod
@@ -312,10 +330,15 @@ def health() -> dict[str, str | bool]:
     }
 
 
-@app.post("/predict", response_model=PredictResponse, tags=["prediction"])
+@app.post(
+    "/predict",
+    response_model=PredictResponse,
+    response_model_exclude_unset=True,
+    tags=["prediction"],
+)
 def predict(payload: ShelterInput) -> PredictResponse:
     """Return the six case-level thermal summary predictions from V3."""
-    input_summary = payload.model_dump()
+    input_summary = payload.model_dump(exclude={"Design_Context"})
     try:
         _validate_v3_categories(payload)
         result = predict_shelter(input_summary, model_path=MODEL_PATH)
@@ -341,7 +364,7 @@ def predict_hourly_endpoint(payload: HourlyPredictRequest) -> HourlyPredictRespo
     """Predict 24 hourly indoor temperatures from a caller-supplied weather profile."""
     try:
         result = predict_hourly(
-            payload.case_inputs.model_dump(),
+            payload.case_inputs.model_dump(exclude={"Design_Context"}),
             [point.model_dump() for point in payload.hourly_climate],
         )
     except ValueError as error:

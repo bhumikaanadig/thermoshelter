@@ -41,8 +41,7 @@ def expect_422(url: str, payload: dict, label: str) -> None:
     raise AssertionError(f"{label}: invalid payload unexpectedly passed validation")
 
 
-def verify_cors_preflight(url: str) -> None:
-    origin = "http://localhost:5173"
+def verify_cors_preflight(url: str, origin: str) -> None:
     request = Request(
         url,
         headers={
@@ -75,6 +74,7 @@ def verify_private_routes_reject_missing_auth(base_url: str) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--base-url", default="http://127.0.0.1:8000")
+    parser.add_argument("--cors-origin", default="http://localhost:5173")
     args = parser.parse_args()
     base_url = args.base_url.rstrip("/")
 
@@ -140,7 +140,23 @@ def main() -> None:
         "A physically valid out-of-training-range length should be accepted with a warning."
     )
 
-    verify_cors_preflight(f"{base_url}/predict")
+    design_context = {
+        "location": "Leh, Ladakh",
+        "occupants": 4,
+        "primary_material": "Stone",
+    }
+    contextual_prediction = post_json(f"{base_url}/predict", {
+        **example_input,
+        "Design_Context": design_context,
+    })
+    assert contextual_prediction["input_summary"]["Design_Context"] == design_context
+    assert contextual_prediction["predictions"] == prediction["predictions"], (
+        "Design context must not alter the completed V3 model's outputs."
+    )
+    invalid_context = {**example_input, "Design_Context": {**design_context, "occupants": 0}}
+    expect_422(f"{base_url}/predict", invalid_context, "nonpositive design-context occupant count")
+
+    verify_cors_preflight(f"{base_url}/predict", args.cors_origin)
     verify_private_routes_reject_missing_auth(base_url)
 
     print("GET /health:")
@@ -149,7 +165,8 @@ def main() -> None:
     print(json.dumps(prediction, indent=2))
     print("Validation passed: missing, physically invalid, and unsupported categorical inputs return HTTP 422.")
     print("Training-range check passed: valid length 6.5 m was predicted and returned with an extrapolation warning.")
-    print("CORS check passed for Authorization and Content-Type from the local Vite origin http://localhost:5173.")
+    print(f"CORS check passed for Authorization and Content-Type from {args.cors_origin}.")
+    print("Design context is echoed for traceability and does not affect V3 inference.")
     print("Private persistence routes reject requests without a Firebase bearer token.")
     print("API smoke test passed: all six outputs are finite numeric values and match the saved V3 example.")
 
