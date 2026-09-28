@@ -714,7 +714,7 @@ function Overview({onDesign,onClimate,onMaterials}) {
           <h1>Design a HOME not just a shelter.</h1>
           <p className="lede">Set the local reference conditions, shape, openings and material layers. Review case-level thermal estimates and forecast-driven indoor temperatures with their scope and units.</p>
           <div className="studio-hero-actions">
-            <button className="primary" type="button" onClick={onDesign}>Design a Shelter <span aria-hidden="true">→</span></button>
+            <button className="primary" type="button" onClick={onDesign}>Plan Shelter <span aria-hidden="true">→</span></button>
             <button className="text-action" type="button" onClick={onClimate}>Explore climate profiles</button>
             <button className="text-action" type="button" onClick={onMaterials}>Browse materials</button>
           </div>
