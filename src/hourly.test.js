@@ -73,6 +73,33 @@ test('fetches a complete real-source-shaped local-day profile without filling va
   );
 });
 
+test('Bengaluru requests Open-Meteo forecast data at the Bengaluru, Karnataka coordinates', async () => {
+  let requestedUrl;
+  await fetchHourlyWeatherProfile('bengaluru', {
+    now: new Date('2026-01-10T02:00:00.000Z'),
+    fetcher: async (url) => {
+      requestedUrl = new URL(url);
+      return { ok: true, json: async () => fakeForecastBody() };
+    },
+  });
+  assert.equal(requestedUrl.searchParams.get('latitude'), '12.9716');
+  assert.equal(requestedUrl.searchParams.get('longitude'), '77.5946');
+  assert.equal(requestedUrl.searchParams.get('timezone'), 'auto');
+});
+
+test('hourly weather requests abort and report a clear timeout instead of waiting indefinitely', async () => {
+  await assert.rejects(fetchHourlyWeatherProfile('leh', {
+    timeoutMs: 5,
+    fetcher: (_url, { signal }) => new Promise((_, reject) => {
+      signal.addEventListener('abort', () => {
+        const error = new Error('Aborted');
+        error.name = 'AbortError';
+        reject(error);
+      }, { once: true });
+    }),
+  }), /timed out after 1 seconds/);
+});
+
 test('maps 21 model inputs plus design context and 24 hourly weather rows; geometry changes the request', () => {
   const hourlyClimate = Array.from({ length: 24 }, (_, Hour) => ({
     Hour,

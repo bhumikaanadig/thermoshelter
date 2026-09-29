@@ -6,8 +6,10 @@ import copy
 import sys
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from fastapi import HTTPException
+from fastapi.testclient import TestClient
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
@@ -16,6 +18,24 @@ if str(PROJECT_ROOT) not in sys.path:
 from api import main
 from api.material_catalog import fallback_materials
 from api.persistence import FirestoreRepository, PersistenceNotFound, validate_document_size
+
+
+class ApiLifespanTest(unittest.TestCase):
+    def test_startup_loads_the_v3_bundle_before_health_reports_ready(self):
+        loaded_paths = []
+
+        def fake_load_bundle(path):
+            loaded_paths.append(path)
+            return {"metadata": {}}
+
+        with patch.object(main, "_load_bundle", side_effect=fake_load_bundle):
+            with TestClient(main.app) as client:
+                self.assertEqual(len(loaded_paths), 1)
+                response = client.get("/health")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["model_loaded"], True)
+        self.assertEqual(len(loaded_paths), 2)
 
 
 class Snapshot:

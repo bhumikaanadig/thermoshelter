@@ -4,6 +4,7 @@ const IDENTITY_ENDPOINT = 'https://identitytoolkit.googleapis.com/v1/accounts:si
 const TOKEN_ENDPOINT = 'https://securetoken.googleapis.com/v1/token';
 const STORAGE_KEY = 'thermoshelter.firebase.anonymous-session.v1';
 const REFRESH_MARGIN_MS = 60_000;
+const AUTH_REQUEST_TIMEOUT_MS = 15_000;
 
 let cachedSession = null;
 let cachedIdToken = '';
@@ -52,22 +53,42 @@ function clearSession() {
   }
 }
 
-async function postFirebaseAuth(url, body, formEncoded = false) {
+export async function postFirebaseAuth(url, body, formEncoded = false, {
+  fetcher = globalThis.fetch,
+  timeoutMs = AUTH_REQUEST_TIMEOUT_MS,
+} = {}) {
+  const controller = new AbortController();
+  let timedOut = false;
+  const timeoutId = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, timeoutMs);
   let response;
+  let payload;
   try {
-    response = await fetch(url, {
+    response = await fetcher(url, {
       method: 'POST',
       headers: { 'Content-Type': formEncoded ? 'application/x-www-form-urlencoded' : 'application/json' },
       body: formEncoded ? new URLSearchParams(body).toString() : JSON.stringify(body),
+      signal: controller.signal,
     });
   } catch {
+    clearTimeout(timeoutId);
+    if (timedOut) {
+      throw new FirebaseIdentityError(`Cloud sign-in timed out after ${Math.ceil(timeoutMs / 1000)} seconds. Please try again.`);
+    }
     throw new FirebaseIdentityError('Cloud saving is temporarily unavailable. Check your connection and try again.');
   }
-  let payload;
   try {
     payload = await response.json();
   } catch {
+    clearTimeout(timeoutId);
+    if (timedOut) {
+      throw new FirebaseIdentityError(`Cloud sign-in timed out after ${Math.ceil(timeoutMs / 1000)} seconds. Please try again.`);
+    }
     throw new FirebaseIdentityError('Cloud saving is temporarily unavailable. Please try again later.');
+  } finally {
+    clearTimeout(timeoutId);
   }
   if (!response.ok) {
     const code = String(payload?.error?.message || '');

@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 import sys
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Annotated, Any, Literal
 
@@ -292,10 +294,23 @@ class PersistOptimizationRequest(BaseModel):
         return self
 
 
+@asynccontextmanager
+async def app_lifespan(_app: FastAPI):
+    """Load V3 once before the service is marked ready for prediction traffic."""
+    try:
+        await asyncio.to_thread(_load_bundle, str(MODEL_PATH))
+    except Exception:
+        logger.exception("The V3 model bundle could not be loaded during API startup")
+        raise
+    logger.info("V3 model bundle loaded; API is ready to serve predictions")
+    yield
+
+
 app = FastAPI(
     title="THERMOSHELTER API",
     description="FastAPI service for the saved V3 summary model and the separate hourly surrogate.",
     version="3.0.0",
+    lifespan=app_lifespan,
 )
 app.add_middleware(
     CORSMiddleware,

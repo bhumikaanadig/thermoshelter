@@ -1,5 +1,6 @@
 import { V3_CATEGORICAL_VALUES, V3_NUMERIC_RANGES } from './v3TrainingRanges.js';
 import { getAnonymousFirebaseIdToken } from './firebaseAuth.js';
+import { requestJsonWithRecovery } from './apiRequest.js';
 
 const API_BASE_URL = (import.meta.env?.VITE_API_BASE_URL || '').trim().replace(/\/+$/, '');
 
@@ -40,42 +41,20 @@ export function getApiErrorMessage(status, body) {
   return detail || `THERMOSHELTER API request failed (${status}).`;
 }
 
-async function requestJson(path, options = {}) {
+async function requestJson(path, options = {}, requestOptions = {}) {
   if (!API_BASE_URL) {
     throw new Error('VITE_API_BASE_URL is not configured.');
   }
-
-  let response;
-  try {
-    response = await fetch(`${API_BASE_URL}${path}`, {
-      ...options,
-      headers: {
-        Accept: 'application/json',
-        ...(options.body ? { 'Content-Type': 'application/json' } : {}),
-        ...options.headers,
-      },
-    });
-  } catch {
-    throw new Error('Unable to connect to THERMOSHELTER API.');
-  }
-
-  let body;
-  try {
-    body = await response.json();
-  } catch {
-    throw new Error('THERMOSHELTER API returned an unreadable response.');
-  }
-
-  if (!response.ok) {
-    const error = new Error(getApiErrorMessage(response.status, body));
-    error.status = response.status;
-    throw error;
-  }
-
-  return body;
+  return requestJsonWithRecovery({
+    baseUrl: API_BASE_URL,
+    path,
+    options,
+    formatError: getApiErrorMessage,
+    ...requestOptions,
+  });
 }
 
-async function requestPrivateJson(path, options = {}) {
+async function requestPrivateJson(path, options = {}, requestOptions = {}) {
   let token;
   try {
     token = await getAnonymousFirebaseIdToken();
@@ -85,7 +64,7 @@ async function requestPrivateJson(path, options = {}) {
   const send = (idToken) => requestJson(path, {
     ...options,
     headers: { ...options.headers, Authorization: `Bearer ${idToken}` },
-  });
+  }, requestOptions);
   try {
     return await send(token);
   } catch (error) {
@@ -95,50 +74,50 @@ async function requestPrivateJson(path, options = {}) {
   }
 }
 
-export function checkApiHealth() {
-  return requestJson('/health');
+export function checkApiHealth(options = {}) {
+  return requestJson('/health', {}, { ...options, recover: false, timeoutMs: 8000 });
 }
 
-export function requestV3Prediction(payload) {
+export function requestV3Prediction(payload, options = {}) {
   return requestJson('/predict', {
     method: 'POST',
     body: JSON.stringify(payload),
-  });
+  }, options);
 }
 
-export function requestHourlyPrediction(payload) {
+export function requestHourlyPrediction(payload, options = {}) {
   return requestJson('/predict-hourly', {
     method: 'POST',
     body: JSON.stringify(payload),
-  });
+  }, options);
 }
 
-export function requestMaterials() {
-  return requestJson('/materials');
+export function requestMaterials(options = {}) {
+  return requestJson('/materials', {}, options);
 }
 
-export function requestSavedDesigns() {
-  return requestPrivateJson('/designs');
+export function requestSavedDesigns(options = {}) {
+  return requestPrivateJson('/designs', {}, options);
 }
 
-export function requestSaveDesign(payload) {
-  return requestPrivateJson('/designs', { method: 'POST', body: JSON.stringify(payload) });
+export function requestSaveDesign(payload, options = {}) {
+  return requestPrivateJson('/designs', { method: 'POST', body: JSON.stringify(payload) }, options);
 }
 
-export function requestLoadDesign(designId) {
-  return requestPrivateJson(`/designs/${encodeURIComponent(designId)}`);
+export function requestLoadDesign(designId, options = {}) {
+  return requestPrivateJson(`/designs/${encodeURIComponent(designId)}`, {}, options);
 }
 
-export function requestDesignHistory(designId) {
-  return requestPrivateJson(`/designs/${encodeURIComponent(designId)}/history`);
+export function requestDesignHistory(designId, options = {}) {
+  return requestPrivateJson(`/designs/${encodeURIComponent(designId)}/history`, {}, options);
 }
 
-export function requestSavePrediction(payload) {
-  return requestPrivateJson('/records/predictions', { method: 'POST', body: JSON.stringify(payload) });
+export function requestSavePrediction(payload, options = {}) {
+  return requestPrivateJson('/records/predictions', { method: 'POST', body: JSON.stringify(payload) }, options);
 }
 
-export function requestSaveOptimizationRun(payload) {
-  return requestPrivateJson('/records/optimization-runs', { method: 'POST', body: JSON.stringify(payload) });
+export function requestSaveOptimizationRun(payload, options = {}) {
+  return requestPrivateJson('/records/optimization-runs', { method: 'POST', body: JSON.stringify(payload) }, options);
 }
 
 /** Select one hourly temperature from the validated API response for the Simulation slider. */
@@ -238,7 +217,13 @@ export function diagnoseV3Payload(payload) {
 }
 
 /** Convert current Design values to 21 V3 features plus raw context for traceability. */
-export function buildV3Payload(design, materialLibrary, climateProfiles, displayedOutdoorTemperature) {
+export function buildV3Payload(
+  design,
+  materialLibrary,
+  climateProfiles,
+  displayedOutdoorTemperature,
+  climateInputOverride = null,
+) {
   const climate = climateProfiles[design.location];
   const geometry = design.geometry;
   const selectedLayers = design.layers.map((id, index) => {
@@ -273,7 +258,9 @@ export function buildV3Payload(design, materialLibrary, climateProfiles, display
 
   const primaryLayer = materialLibrary[design.layers[0]];
   const openingArea = geometry.windowArea + geometry.doorArea;
-  const dailySolarEnergy = climate.solar * 0.006; // 6 equivalent full-sun hours, kWh/m²/day.
+  const solarRadiation = climateInputOverride?.Solar_Radiation_W_m2 ?? climate.solar;
+  const dailySolarEnergy = climateInputOverride?.Daily_Solar_Energy_kWh_m2
+    ?? solarRadiation * 0.006; // Static profiles use six equivalent full-sun hours.
   const designContext = Number.isFinite(design.occupants)
     ? {
       location: climate.name,
@@ -297,13 +284,13 @@ export function buildV3Payload(design, materialLibrary, climateProfiles, display
     Window_Area_m2: geometry.windowArea,
     Door_Area_m2: geometry.doorArea,
     Orientation_deg: ORIENTATION_DEGREES[geometry.orientation],
-    External_Temperature_C: displayedOutdoorTemperature,
+    External_Temperature_C: climateInputOverride?.External_Temperature_C ?? displayedOutdoorTemperature,
     // TODO: make initial air temperature a separate user-configurable input; the current Design model has only its target control.
     Initial_Air_Temperature_C: design.target,
-    Solar_Radiation_W_m2: climate.solar,
+    Solar_Radiation_W_m2: solarRadiation,
     Daily_Solar_Energy_kWh_m2: dailySolarEnergy,
-    Wind_Speed_m_s: climate.wind,
-    Relative_Humidity_percent: climate.humidity,
+    Wind_Speed_m_s: climateInputOverride?.Wind_Speed_m_s ?? climate.wind,
+    Relative_Humidity_percent: climateInputOverride?.Relative_Humidity_percent ?? climate.humidity,
     Simulation_Duration_h: 24,
     Time_Step_min: 30,
     ...(designContext ? { Design_Context: designContext } : {}),
@@ -380,7 +367,10 @@ function buildOptimizationGeometryProfiles(design) {
   });
 }
 
-function scaledLayerThicknesses(design, materialLibrary, targetThickness) {
+export function scaleV3WallThickness(design, materialLibrary, targetThickness) {
+  if (typeof targetThickness !== 'number' || !Number.isFinite(targetThickness) || targetThickness <= 0) {
+    throw new Error('Total wall thickness must be a finite number greater than zero.');
+  }
   const layers = design.layers.map((id, index) => {
     const material = materialLibrary[id];
     const thickness = design.layerThicknesses?.[index] ?? material?.t;
@@ -403,7 +393,7 @@ function scaledLayerThicknesses(design, materialLibrary, targetThickness) {
 }
 
 /** Build a bounded, V3-range-checked design screen using empirical input quartiles. */
-export function buildV3OptimizationPayloads(design, materialLibrary, climateProfiles) {
+export function buildV3OptimizationPayloads(design, materialLibrary, climateProfiles, climateInputOverride = null) {
   const climate = climateProfiles[design.location];
   if (!climate) throw new Error('The selected climate profile is unavailable.');
   const profiles = buildOptimizationGeometryProfiles(design);
@@ -414,7 +404,8 @@ export function buildV3OptimizationPayloads(design, materialLibrary, climateProf
   if (!materialIds.length || !wallThicknesses.length) {
     throw new Error('The V3 optimization search has no supported material or wall-thickness candidates.');
   }
-  const displayedOutdoorTemperature = getDisplayedOutdoorTemperatureForClimate(climate);
+  const displayedOutdoorTemperature = climateInputOverride?.External_Temperature_C
+    ?? getDisplayedOutdoorTemperatureForClimate(climate);
   const candidates = [];
 
   for (let materialIndex = 0; materialIndex < materialIds.length; materialIndex += 1) {
@@ -422,7 +413,7 @@ export function buildV3OptimizationPayloads(design, materialLibrary, climateProf
     const layers = [materialId, 'insulation', 'concrete'];
     for (let thicknessIndex = 0; thicknessIndex < wallThicknesses.length; thicknessIndex += 1) {
       const wallThickness = wallThicknesses[thicknessIndex];
-      const layerThicknesses = scaledLayerThicknesses(
+      const layerThicknesses = scaleV3WallThickness(
         { ...design, layers },
         materialLibrary,
         wallThickness,
@@ -438,6 +429,7 @@ export function buildV3OptimizationPayloads(design, materialLibrary, climateProf
           materialLibrary,
           climateProfiles,
           displayedOutdoorTemperature,
+          climateInputOverride,
         );
         const diagnostics = diagnoseV3Payload(payload);
         if (diagnostics.invalidNumericInputs.length || diagnostics.numericOutOfRange.length
@@ -480,10 +472,11 @@ export function buildV3OptimizationPayloads(design, materialLibrary, climateProf
 }
 
 /** Generate the application's existing material assemblies under identical current design inputs. */
-export function buildV3CandidatePayloads(design, materialLibrary, climateProfiles) {
+export function buildV3CandidatePayloads(design, materialLibrary, climateProfiles, climateInputOverride = null) {
   const climate = climateProfiles[design.location];
   if (!climate) throw new Error('The selected climate profile is unavailable.');
-  const displayedOutdoorTemperature = getDisplayedOutdoorTemperatureForClimate(climate);
+  const displayedOutdoorTemperature = climateInputOverride?.External_Temperature_C
+    ?? getDisplayedOutdoorTemperatureForClimate(climate);
 
   return Object.keys(materialLibrary)
     .filter((materialId) => materialId !== 'insulation')
@@ -495,6 +488,7 @@ export function buildV3CandidatePayloads(design, materialLibrary, climateProfile
         materialLibrary,
         climateProfiles,
         displayedOutdoorTemperature,
+        climateInputOverride,
       ),
     }));
 }
@@ -504,15 +498,26 @@ export async function evaluateV3CandidatePayloads(
   candidates,
   requestCache = new Map(),
   requestPrediction = requestV3Prediction,
+  progressOptions = {},
 ) {
   const results = new Array(candidates.length);
   let nextIndex = 0;
+  let completedCount = 0;
   const workerCount = Math.min(8, candidates.length);
+
+  const reportCompletion = (candidate) => {
+    completedCount += 1;
+    progressOptions.onCandidateComplete?.({
+      completed: completedCount,
+      total: candidates.length,
+      candidate: candidate.label,
+    });
+  };
 
   const evaluateCandidate = async (candidate) => {
     const diagnostics = diagnoseV3Payload(candidate.payload);
     if (diagnostics.invalidNumericInputs.length || diagnostics.unsupportedCategories.length) {
-      return {
+      const result = {
         ...candidate,
         diagnostics,
         prediction: null,
@@ -520,12 +525,16 @@ export async function evaluateV3CandidatePayloads(
           ? 'Unsupported material/category value.'
           : 'A numeric input is missing or non-finite.',
       };
+      reportCompletion(candidate);
+      return result;
     }
 
     const cacheKey = JSON.stringify(candidate.payload);
     let pendingRequest = requestCache.get(cacheKey);
     if (!pendingRequest) {
-      pendingRequest = requestPrediction(candidate.payload);
+      pendingRequest = requestPrediction(candidate.payload, {
+        onProgress: progressOptions.onApiProgress,
+      });
       requestCache.set(cacheKey, pendingRequest);
       pendingRequest.catch(() => {
         if (requestCache.get(cacheKey) === pendingRequest) requestCache.delete(cacheKey);
@@ -534,14 +543,18 @@ export async function evaluateV3CandidatePayloads(
 
     try {
       const prediction = await pendingRequest;
-      return { ...candidate, diagnostics, prediction, error: null };
+      const result = { ...candidate, diagnostics, prediction, error: null };
+      reportCompletion(candidate);
+      return result;
     } catch (error) {
-      return {
+      const result = {
         ...candidate,
         diagnostics,
         prediction: null,
         error: error?.message || 'Unable to connect to THERMOSHELTER API.',
       };
+      reportCompletion(candidate);
+      return result;
     }
   };
 

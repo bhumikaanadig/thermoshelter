@@ -2,12 +2,15 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   buildV3Payload,
+  buildV3CandidatePayloads,
   buildV3OptimizationPayloads,
   diagnoseV3Payload,
   evaluateV3CandidatePayloads,
   getApiErrorMessage,
   getDisplayedOutdoorTemperatureForClimate,
+  scaleV3WallThickness,
 } from './api.js';
+import { CLIMATE_PROFILES, usesForecastBackedClimate } from './climateProfiles.js';
 
 const materials = {
   stone: { name: 'Stone', k: 1.7, rho: 2200, cp: 840, t: 0.3 },
@@ -123,6 +126,69 @@ test('turns FastAPI validation errors into useful field-specific UI messages', (
   assert.equal(getApiErrorMessage(502, {}), 'THERMOSHELTER API request failed (502).');
 });
 
+test('scales the full existing layer assembly to a requested total wall thickness', () => {
+  for (const [material, requested] of [['stone', 0.3], ['brick', 0.23]]) {
+    const layers = [material, 'insulation', 'concrete'];
+    const scaled = scaleV3WallThickness({ ...baseDesign, layers }, materials, requested);
+    assert.equal(scaled.length, 3);
+    assert.ok(Math.abs(scaled.reduce((sum, value) => sum + value, 0) - requested) < 1e-6);
+    assert.ok(scaled.every((value) => value > 0));
+  }
+  assert.throws(() => scaleV3WallThickness(baseDesign, materials, 0), /greater than zero/);
+});
+
+test('Bengaluru uses complete forecast inputs and preserves Case B context and extrapolation', () => {
+  const climateOverride = {
+    External_Temperature_C: 24.2,
+    Solar_Radiation_W_m2: 910,
+    Daily_Solar_Energy_kWh_m2: 5.6,
+    Wind_Speed_m_s: 2.7,
+    Relative_Humidity_percent: 61.5,
+  };
+  const design = {
+    location: 'bengaluru',
+    occupants: 6,
+    target: 22,
+    geometry: { length: 8, width: 6, height: 3.2, orientation: 'S', windowArea: 4.5, doorArea: 2.4 },
+    layers: ['brick', 'insulation', 'concrete'],
+    layerThicknesses: scaleV3WallThickness(
+      { ...baseDesign, layers: ['brick', 'insulation', 'concrete'] },
+      materials,
+      0.23,
+    ),
+  };
+  assert.equal(CLIMATE_PROFILES.bengaluru.name, 'Bengaluru, Karnataka');
+  assert.equal(usesForecastBackedClimate('bengaluru'), true);
+  const payload = buildV3Payload(design, materials, CLIMATE_PROFILES, climateOverride.External_Temperature_C, climateOverride);
+  assert.deepEqual(payload.Design_Context, {
+    location: 'Bengaluru, Karnataka',
+    occupants: 6,
+    primary_material: 'Brick',
+  });
+  assert.equal(payload.Wall_Thickness_m, 0.23);
+  assert.equal(payload.Shelter_Length_m, 8);
+  assert.equal(payload.Shelter_Width_m, 6);
+  assert.equal(payload.Shelter_Height_m, 3.2);
+  assert.equal(payload.Window_Area_m2, 4.5);
+  assert.equal(payload.Door_Area_m2, 2.4);
+  assert.equal(payload.Orientation_deg, 180);
+  assert.equal(payload.Initial_Air_Temperature_C, 22);
+  for (const [field, expected] of Object.entries(climateOverride)) assert.equal(payload[field], expected);
+  assert.ok(diagnoseV3Payload(payload).numericOutOfRange.some(({ field }) => field === 'Shelter_Length_m'));
+  assert.ok(diagnoseV3Payload(payload).numericOutOfRange.some(({ field }) => field === 'Shelter_Width_m'));
+
+  const candidates = buildV3CandidatePayloads(design, materials, CLIMATE_PROFILES, climateOverride);
+  assert.equal(candidates.length, 6);
+  assert.ok(candidates.every(({ payload: candidate }) => candidate.External_Temperature_C === 24.2
+    && candidate.Solar_Radiation_W_m2 === 910
+    && candidate.Wind_Speed_m_s === 2.7
+    && candidate.Relative_Humidity_percent === 61.5));
+  const optimization = buildV3OptimizationPayloads(design, materials, CLIMATE_PROFILES, climateOverride);
+  assert.equal(optimization.length, 36);
+  assert.ok(optimization.every(({ payload: candidate }) => candidate.External_Temperature_C === 24.2
+    && candidate.Daily_Solar_Energy_kWh_m2 === 5.6));
+});
+
 test('builds a transparent V3 search across materials, empirical thickness levels, and orientations', () => {
   const candidates = buildV3OptimizationPayloads(baseDesign, materials, climates);
 
@@ -184,6 +250,24 @@ test('limits parallel candidate requests to eight', async () => {
   assert.equal(results.length, 36);
   assert.equal(requestCount, 36);
   assert.equal(maximumActiveRequests, 8);
+});
+
+test('candidate evaluation reports settled candidate counts and forwards API readiness stages', async () => {
+  const candidates = buildV3CandidatePayloads(baseDesign, materials, climates).slice(0, 2);
+  const completed = [];
+  const apiStages = [];
+  const rows = await evaluateV3CandidatePayloads(candidates, new Map(), async (_payload, { onProgress }) => {
+    onProgress?.({ phase: 'recovering', percent: 35, label: 'Waiting for the thermal API — 35%' });
+    return { predictions: { Average_Air_Temperature_C: 18 } };
+  }, {
+    onCandidateComplete: (progress) => completed.push(progress),
+    onApiProgress: (progress) => apiStages.push(progress.phase),
+  });
+
+  assert.equal(rows.length, 2);
+  assert.deepEqual(completed.map(({ completed: count, total }) => [count, total]), [[1, 2], [2, 2]]);
+  assert.equal(apiStages.length, 2);
+  assert.ok(apiStages.every((phase) => phase === 'recovering'));
 });
 
 test('changing user geometry, target, or climate changes the generated V3 candidate inputs', () => {

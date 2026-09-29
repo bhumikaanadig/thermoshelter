@@ -7,7 +7,6 @@ import {
   buildHourlyPredictionRequest,
   buildV3CandidatePayloads,
   buildV3OptimizationPayloads,
-  checkApiHealth,
   diagnoseV3Payload,
   evaluateV3CandidatePayloads,
   getDisplayedOutdoorTemperatureForClimate,
@@ -15,7 +14,9 @@ import {
   requestHourlyPrediction,
   selectHourlyIndoorTemperature,
   rankV3CandidatesByTarget,
+  scaleV3WallThickness,
 } from './api.js';
+import { CLIMATE_PROFILES, usesForecastBackedClimate } from './climateProfiles.js';
 import { FALLBACK_MATERIALS } from './materials.js';
 import {
   buildDesignSnapshot,
@@ -26,16 +27,10 @@ import {
   restoreSavedDesign,
 } from './persistence.js';
 import { OPEN_METEO_ATTRIBUTION, fetchHourlyWeatherProfile } from './weather.js';
+import { OperationProgress, V3PredictionGrid, v3OutputRows } from './v3ResultUi.js';
 import './styles.css';
 
-const CLIMATE = {
-  leh: { name:'Leh, Ladakh', mean:-5, amp:9, solar:850, wind:12, humidity:32, elevation:'3,500 m', season:'Winter reference' },
-  manali: { name:'Manali, Himachal Pradesh', mean:5, amp:8, solar:720, wind:8, humidity:55, elevation:'2,050 m', season:'Winter reference' },
-  srinagar: { name:'Srinagar, Jammu & Kashmir', mean:3, amp:8, solar:680, wind:10, humidity:65, elevation:'1,585 m', season:'Winter reference' },
-  shimla: { name:'Shimla, Himachal Pradesh', mean:4, amp:7, solar:650, wind:9, humidity:50, elevation:'2,205 m', season:'Winter reference' },
-  jaisalmer: { name:'Jaisalmer, Rajasthan', mean:21, amp:11, solar:920, wind:14, humidity:20, elevation:'225 m', season:'Summer reference' },
-  delhi: { name:'Delhi, NCR', mean:24, amp:10, solar:850, wind:8, humidity:55, elevation:'216 m', season:'Reference' },
-};
+const CLIMATE = CLIMATE_PROFILES;
 
 const BASE = {
   location:'leh', occupants:4, target:18, priority:'comfort',
@@ -45,35 +40,51 @@ const BASE = {
 
 function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
 
+function setMonotonicProgress(setter, progress, maxPercent = 100) {
+  setter((previous) => {
+    const percent = Math.max(previous?.percent || 0, Math.min(maxPercent, progress?.percent || 0));
+    const label = typeof progress?.label === 'string'
+      ? progress.label.replace(/—\s*\d+%$/, `— ${percent}%`)
+      : previous?.label;
+    return { ...progress, percent, label };
+  });
+}
+
 function App(){
   const [page,setPage]=useState('overview');
   const navRef=useRef(null);
   const [s,setS]=useState(BASE);
   const [materials,setMaterials]=useState(FALLBACK_MATERIALS);
   const [materialStatus,setMaterialStatus]=useState({loading:true,source:'local_fallback',warning:''});
+  const [materialProgress,setMaterialProgress]=useState({percent:15,label:'Loading the material catalog — 15%'});
   const [savedDesigns,setSavedDesigns]=useState([]);
   const [savedDesignsLoading,setSavedDesignsLoading]=useState(false);
   const [savedDesignError,setSavedDesignError]=useState('');
   const [savedDesignName,setSavedDesignName]=useState('Leh shelter design');
   const [saveDesignLoading,setSaveDesignLoading]=useState(false);
+  const [designProgress,setDesignProgress]=useState(null);
   const [savedDesignId,setSavedDesignId]=useState(null);
   const [designHistory,setDesignHistory]=useState(null);
   const [storageNotice,setStorageNotice]=useState('');
   const persistence=useMemo(()=>createPersistenceClient(),[]);
   const [toast,setToast]=useState('');
   const [v3Prediction,setV3Prediction]=useState(null);
+  const [v3CaseWeatherProfile,setV3CaseWeatherProfile]=useState(null);
   const [v3PredictionLoading,setV3PredictionLoading]=useState(false);
+  const [v3PredictionProgress,setV3PredictionProgress]=useState(null);
   const [v3PredictionError,setV3PredictionError]=useState('');
   const [v3Diagnostics,setV3Diagnostics]=useState({numericOutOfRange:[],invalidNumericInputs:[],unsupportedCategories:[]});
   const v3PredictionRunId=useRef(0);
   const [candidateEvaluation,setCandidateEvaluation]=useState({status:'idle',rows:[],errors:[]});
   const [optimizationEvaluation,setOptimizationEvaluation]=useState({status:'idle',rows:[],errors:[]});
+  const [candidateProgress,setCandidateProgress]=useState(null);
+  const [optimizationProgress,setOptimizationProgress]=useState(null);
   const v3CandidateRequestCache=useRef(new Map());
   const candidateEvaluationRunId=useRef(0);
   const optimizationRunId=useRef(0);
-  const [apiStatus,setApiStatus]=useState({checking:true,connected:false,modelLoaded:false});
   const [hourlyPrediction,setHourlyPrediction]=useState(null);
   const [hourlyPredictionLoading,setHourlyPredictionLoading]=useState(false);
+  const [hourlyProgress,setHourlyProgress]=useState(null);
   const [hourlyPredictionError,setHourlyPredictionError]=useState('');
   const [hourlyPredictionErrorDetail,setHourlyPredictionErrorDetail]=useState('');
   const [hourlyWeatherProfile,setHourlyWeatherProfile]=useState(null);
@@ -89,7 +100,7 @@ function App(){
     let active=true;
     const refreshMaterials=async()=>{
       try{
-        const response=await persistence.getMaterials();
+        const response=await persistence.getMaterials({onProgress:(progress)=>{if(active) setMaterialProgress(progress);}});
         const normalized=normalizeMaterialLibrary(response);
         const requiredIds=Object.keys(FALLBACK_MATERIALS);
         if(requiredIds.some(id=>!normalized[id])||Object.keys(normalized).some(id=>!requiredIds.includes(id))){
@@ -104,36 +115,13 @@ function App(){
           setMaterials(FALLBACK_MATERIALS);
           setMaterialStatus({loading:false,source:'local_fallback',warning:error?.message||'Material data could not be loaded.'});
         }
+      }finally{
+        if(active) setMaterialProgress(null);
       }
     };
     void refreshMaterials();
     return ()=>{active=false;};
   },[persistence]);
-  useEffect(()=>{
-    let active=true;
-    const refreshApiStatus=async()=>{
-      try{
-        const health=await checkApiHealth();
-        if(active){
-          setApiStatus({
-            checking:false,
-            connected:health.api_running===true,
-            modelLoaded:health.model_loaded===true,
-          });
-        }
-      }catch{
-        if(active){
-          setApiStatus({checking:false,connected:false,modelLoaded:false});
-        }
-      }
-    };
-    refreshApiStatus();
-    const interval=window.setInterval(refreshApiStatus,15000);
-    return ()=>{
-      active=false;
-      window.clearInterval(interval);
-    };
-  },[]);
   const clearHourlyPrediction=()=>{
     hourlyRunId.current+=1;
     setHourlyPrediction(null);
@@ -141,12 +129,15 @@ function App(){
     setHourlyPredictionErrorDetail('');
     setHourlyWeatherProfile(null);
     setHourlyRequestPayload(null);
+    setHourlyProgress(null);
     setHourlyPredictionLoading(false);
   };
   const invalidateV3Prediction=()=>{
     v3PredictionRunId.current+=1;
     setV3Prediction(null);
+    setV3CaseWeatherProfile(null);
     setV3PredictionError('');
+    setV3PredictionProgress(null);
     setV3PredictionLoading(false);
     setV3Diagnostics({numericOutOfRange:[],invalidNumericInputs:[],unsupportedCategories:[]});
   };
@@ -178,6 +169,8 @@ function App(){
     v3CandidateRequestCache.current.clear();
     setCandidateEvaluation({status:'idle',rows:[],errors:[]});
     setOptimizationEvaluation({status:'idle',rows:[],errors:[]});
+    setCandidateProgress(null);
+    setOptimizationProgress(null);
   };
   const persistenceSnapshot=(design,weatherProfile=null)=>buildDesignSnapshot(
     design,
@@ -185,17 +178,22 @@ function App(){
     materials,
     weatherProfile,
   );
-  const refreshSavedDesignList=async()=>{
+  const refreshSavedDesignList=async({showProgress=true}={})=>{
     setSavedDesignsLoading(true);
     setSavedDesignError('');
+    if(showProgress) setDesignProgress({percent:15,label:'Loading saved designs — 15%'});
     try{
-      const response=await persistence.listDesigns();
+      const response=await persistence.listDesigns({onProgress:(progress)=>{
+        if(showProgress) setMonotonicProgress(setDesignProgress,progress);
+      }});
       setSavedDesigns(Array.isArray(response?.designs)?response.designs:[]);
+      if(showProgress) setDesignProgress({percent:90,label:'Saved design list ready — 90%'});
     }catch(error){
       setSavedDesigns([]);
       setSavedDesignError(error?.message||'Saved designs could not be loaded.');
     }finally{
       setSavedDesignsLoading(false);
+      if(showProgress) setDesignProgress(null);
     }
   };
   const openDesignWorkspace=()=>{
@@ -204,6 +202,7 @@ function App(){
   };
   const saveCurrentDesign=async()=>{
     setSaveDesignLoading(true);
+    setDesignProgress({percent:15,label:'Preparing the design snapshot — 15%'});
     setStorageNotice('');
     try{
       const snapshot=persistenceSnapshot(s);
@@ -213,32 +212,36 @@ function App(){
         climate:snapshot.climate,
         materials:snapshot.materials,
         ...(savedDesignId?{design_id:savedDesignId}:{}),
-      });
+      },{onProgress:(progress)=>setMonotonicProgress(setDesignProgress,progress,75)});
       const saved=response?.design;
       if(!saved?.id) throw new Error('The backend did not return the saved design identifier.');
       setSavedDesignId(saved.id);
       setSavedDesignName(saved.name||'Untitled shelter');
       setDesignHistory(null);
       setStorageNotice('Design saved. Run an analysis to save results for this design.');
-      await refreshSavedDesignList();
+      setDesignProgress({percent:90,label:'Design saved; refreshing the list — 90%'});
+      await refreshSavedDesignList({showProgress:false});
       notify('Shelter design saved.');
     }catch(error){
       setStorageNotice(`Design was not saved: ${error?.message||'Firestore is unavailable.'}`);
     }finally{
       setSaveDesignLoading(false);
+      setDesignProgress(null);
     }
   };
   const loadSavedDesign=async(designId)=>{
     if(!designId) return;
     setSavedDesignsLoading(true);
+    setDesignProgress({percent:15,label:'Loading the saved design — 15%'});
     setSavedDesignError('');
     try{
-      const response=await persistence.loadDesign(designId);
+      const response=await persistence.loadDesign(designId,{onProgress:(progress)=>setMonotonicProgress(setDesignProgress,progress,50)});
       const restored=restoreSavedDesign(response?.design,materials,Object.keys(CLIMATE));
+      setDesignProgress({percent:60,label:'Loading saved result history — 60%'});
       let history=null;
       let historyWarning='';
       try{
-        history=await persistence.getDesignHistory(designId);
+        history=await persistence.getDesignHistory(designId,{onProgress:(progress)=>setMonotonicProgress(setDesignProgress,progress,85)});
       }catch(error){
         historyWarning=` The design loaded, but its saved result history could not be read: ${error?.message||'request failed'}`;
       }
@@ -250,12 +253,14 @@ function App(){
       invalidateV3Prediction();
       resetCandidateEvaluation();
       setStorageNotice(`Loaded saved design. Historical results are labeled separately; run analysis for a current result.${historyWarning}`);
+      setDesignProgress({percent:90,label:'Saved design restored — 90%'});
       setPage('design');
       notify('Saved design loaded. Run a new analysis for current results.');
     }catch(error){
       setSavedDesignError(error?.message||'The saved design is missing or invalid.');
     }finally{
       setSavedDesignsLoading(false);
+      setDesignProgress(null);
     }
   };
   const persistPrediction=async({design,designId,modelVersion,kind,result,diagnostics,weatherProfile=null})=>{
@@ -277,8 +282,8 @@ function App(){
       setStorageNotice(`Prediction completed but was not saved: ${error?.message||'Firestore is unavailable.'}`);
     }
   };
-  const persistOptimization=async({design,designId,rows})=>{
-    const snapshot=persistenceSnapshot(design);
+  const persistOptimization=async({design,designId,rows,weatherProfile=null})=>{
+    const snapshot=persistenceSnapshot(design,weatherProfile);
     const ranked=rankV3CandidatesByTarget(rows,design.target);
     const selected=ranked[0]||null;
     const candidates=rows.map((row)=>({
@@ -326,9 +331,37 @@ function App(){
     if(candidateEvaluation.status==='loading') return;
     const operationId=++candidateEvaluationRunId.current;
     setCandidateEvaluation({status:'loading',rows:[],errors:[]});
+    setCandidateProgress({percent:10,label:'Preparing six material assemblies — 10%',completed:0,total:6});
     try{
-      const candidates=buildV3CandidatePayloads(s,materials,CLIMATE);
-      const rows=await evaluateV3CandidatePayloads(candidates,v3CandidateRequestCache.current);
+      let weatherProfile=null;
+      if(usesForecastBackedClimate(s.location)){
+        setCandidateProgress({percent:15,label:'Fetching Bengaluru case weather from Open-Meteo — 15%',completed:0,total:6});
+        weatherProfile=await fetchHourlyWeatherProfile(s.location);
+        if(operationId!==candidateEvaluationRunId.current) return;
+      }
+      const climateOverride=weatherProfile?.caseClimateSummary||null;
+      const candidates=buildV3CandidatePayloads(s,materials,CLIMATE,climateOverride);
+      const progressBase=climateOverride?20:15;
+      setCandidateProgress({percent:progressBase,label:`Prepared ${candidates.length} material requests — ${progressBase}%`,completed:0,total:candidates.length});
+      const rows=await evaluateV3CandidatePayloads(candidates,v3CandidateRequestCache.current,requestV3Prediction,{
+        onCandidateComplete:({completed,total})=>{
+          if(operationId!==candidateEvaluationRunId.current) return;
+          setCandidateProgress({
+            percent:progressBase+Math.round((completed/total)*(90-progressBase)),
+            label:`V3 material predictions returned (${completed}/${total}) — ${progressBase+Math.round((completed/total)*(90-progressBase))}%`,
+            completed,
+            total,
+          });
+        },
+        onApiProgress:(progress)=>{
+          if(operationId!==candidateEvaluationRunId.current
+            ||!['connecting','recovering','ready','retrying'].includes(progress.phase)) return;
+          setCandidateProgress((previous)=>previous?{
+            ...previous,
+            label:`${progress.label.replace(/—\s*\d+%$/,'')} · ${previous.completed||0}/${previous.total||candidates.length} candidates returned — ${previous.percent}%`,
+          }:previous);
+        },
+      });
       if(operationId!==candidateEvaluationRunId.current) return;
       const failures=rows.filter(row=>row.error).map(row=>({candidate:row.label,message:row.error}));
       const successfulCount=rows.filter(row=>row.prediction).length;
@@ -337,10 +370,7 @@ function App(){
         rows,
         errors:failures,
       });
-      if(successfulCount>0) setApiStatus({checking:false,connected:true,modelLoaded:true});
-      else if(failures.some(({message})=>message.includes('connect to THERMOSHELTER API'))){
-        setApiStatus({checking:false,connected:false,modelLoaded:false});
-      }
+      setCandidateProgress(null);
     }catch(error){
       if(operationId!==candidateEvaluationRunId.current) return;
       setCandidateEvaluation({
@@ -348,17 +378,46 @@ function App(){
         rows:[],
         errors:[{candidate:'Candidate set',message:error?.message||'Unable to evaluate candidates.'}],
       });
+      setCandidateProgress(null);
     }
   };
   const runOptimizationSearch=async()=>{
     if(optimizationEvaluation.status==='loading') return;
     const operationId=++optimizationRunId.current;
     setOptimizationEvaluation({status:'loading',rows:[],errors:[]});
+    setOptimizationProgress({percent:10,label:'Preparing the V3 design-space search — 10%',completed:0,total:36});
     try{
       const designAtStart={...s,geometry:{...s.geometry},layers:[...s.layers]};
       const designIdAtStart=savedDesignId;
-      const candidates=buildV3OptimizationPayloads(designAtStart,materials,CLIMATE);
-      const rows=await evaluateV3CandidatePayloads(candidates,v3CandidateRequestCache.current);
+      let weatherProfile=null;
+      if(usesForecastBackedClimate(designAtStart.location)){
+        setOptimizationProgress({percent:15,label:'Fetching Bengaluru case weather from Open-Meteo — 15%',completed:0,total:36});
+        weatherProfile=await fetchHourlyWeatherProfile(designAtStart.location);
+        if(operationId!==optimizationRunId.current) return;
+      }
+      const climateOverride=weatherProfile?.caseClimateSummary||null;
+      const candidates=buildV3OptimizationPayloads(designAtStart,materials,CLIMATE,climateOverride);
+      const progressBase=climateOverride?20:15;
+      setOptimizationProgress({percent:progressBase,label:`Prepared ${candidates.length} candidate inputs — ${progressBase}%`,completed:0,total:candidates.length});
+      const rows=await evaluateV3CandidatePayloads(candidates,v3CandidateRequestCache.current,requestV3Prediction,{
+        onCandidateComplete:({completed,total})=>{
+          if(operationId!==optimizationRunId.current) return;
+          setOptimizationProgress({
+            percent:progressBase+Math.round((completed/total)*(90-progressBase)),
+            label:`V3 candidates evaluated (${completed}/${total}) — ${progressBase+Math.round((completed/total)*(90-progressBase))}%`,
+            completed,
+            total,
+          });
+        },
+        onApiProgress:(progress)=>{
+          if(operationId!==optimizationRunId.current
+            ||!['connecting','recovering','ready','retrying'].includes(progress.phase)) return;
+          setOptimizationProgress((previous)=>previous?{
+            ...previous,
+            label:`${progress.label.replace(/—\s*\d+%$/,'')} · ${previous.completed||0}/${previous.total||candidates.length} candidates returned — ${previous.percent}%`,
+          }:previous);
+        },
+      });
       if(operationId!==optimizationRunId.current) return;
       const failures=rows.filter(row=>row.error).map(row=>({candidate:row.label,message:row.error}));
       const successfulCount=rows.filter(row=>row.prediction).length;
@@ -368,12 +427,9 @@ function App(){
         errors:failures,
       });
       if(successfulCount>0){
-        void persistOptimization({design:designAtStart,designId:designIdAtStart,rows});
+        void persistOptimization({design:designAtStart,designId:designIdAtStart,rows,weatherProfile});
       }
-      if(successfulCount>0) setApiStatus({checking:false,connected:true,modelLoaded:true});
-      else if(failures.some(({message})=>message.includes('connect to THERMOSHELTER API'))){
-        setApiStatus({checking:false,connected:false,modelLoaded:false});
-      }
+      setOptimizationProgress(null);
     }catch(error){
       if(operationId!==optimizationRunId.current) return;
       setOptimizationEvaluation({
@@ -381,6 +437,7 @@ function App(){
         rows:[],
         errors:[{candidate:'Optimization search',message:error?.message||'Unable to build the V3 search.'}],
       });
+      setOptimizationProgress(null);
     }
   };
   const applyCandidate=(materialId)=>{
@@ -403,15 +460,27 @@ function App(){
     const designAtStart={...s,geometry:{...s.geometry},layers:[...s.layers]};
     const designIdAtStart=savedDesignId;
     setV3PredictionLoading(true);
+    setV3PredictionProgress({percent:15,label:'Preparing current design inputs — 15%'});
     setV3PredictionError('');
     setV3Prediction(null);
+    setV3CaseWeatherProfile(null);
     setV3Diagnostics({numericOutOfRange:[],invalidNumericInputs:[],unsupportedCategories:[]});
     try{
+      let weatherProfile=null;
+      if(usesForecastBackedClimate(designAtStart.location)){
+        setV3PredictionProgress({percent:20,label:'Fetching Bengaluru case weather from Open-Meteo — 20%'});
+        weatherProfile=await fetchHourlyWeatherProfile(designAtStart.location);
+        if(operationId!==v3PredictionRunId.current) return;
+        setV3PredictionProgress({percent:30,label:'Forecast received; preparing V3 model inputs — 30%'});
+      }
+      const climateOverride=weatherProfile?.caseClimateSummary||null;
       const payload=buildV3Payload(
         designAtStart,
         materials,
         CLIMATE,
-        getDisplayedOutdoorTemperatureForClimate(CLIMATE[designAtStart.location]),
+        climateOverride?.External_Temperature_C
+          ?? getDisplayedOutdoorTemperatureForClimate(CLIMATE[designAtStart.location]),
+        climateOverride,
       );
       const diagnostics=diagnoseV3Payload(payload);
       setV3Diagnostics(diagnostics);
@@ -421,10 +490,12 @@ function App(){
           : 'One or more numeric inputs are not finite numbers. Check the design values and try again.');
         return;
       }
-      const result=await requestV3Prediction(payload);
+      const result=await requestV3Prediction(payload,{onProgress:(progress)=>{
+        if(operationId===v3PredictionRunId.current) setV3PredictionProgress(progress);
+      }});
       if(operationId!==v3PredictionRunId.current) return;
       setV3Prediction(result);
-      setApiStatus({checking:false,connected:true,modelLoaded:true});
+      setV3CaseWeatherProfile(weatherProfile);
       void persistPrediction({
         design:designAtStart,
         designId:designIdAtStart,
@@ -432,6 +503,7 @@ function App(){
         kind:'summary',
         result,
         diagnostics,
+        weatherProfile,
       });
     }catch(error){
       if(operationId!==v3PredictionRunId.current) return;
@@ -439,11 +511,11 @@ function App(){
         ? error.message
         : 'The thermal prediction could not be completed. Check the design inputs and try again.';
       setV3PredictionError(errorMessage);
-      if(errorMessage==='VITE_API_BASE_URL is not configured.'){
-        setApiStatus({checking:false,connected:false,modelLoaded:false});
-      }
     }finally{
-      if(operationId===v3PredictionRunId.current) setV3PredictionLoading(false);
+      if(operationId===v3PredictionRunId.current){
+        setV3PredictionLoading(false);
+        setV3PredictionProgress(null);
+      }
     }
   };
   const runHourlyPrediction=async(design=s)=>{
@@ -451,15 +523,18 @@ function App(){
     const designIdAtStart=design===s?savedDesignId:null;
     const operationId=++hourlyRunId.current;
     setHourlyPredictionLoading(true);
+    setHourlyProgress({percent:10,label:'Preparing the hourly forecast request — 10%'});
     setHourlyPrediction(null);
     setHourlyPredictionError('');
     setHourlyPredictionErrorDetail('');
     setHourlyWeatherProfile(null);
     setHourlyRequestPayload(null);
     try{
+      setHourlyProgress({percent:20,label:'Fetching the next local-day forecast — 20%'});
       const weather=await fetchHourlyWeatherProfile(designAtStart.location);
       if(operationId!==hourlyRunId.current) return;
       setHourlyWeatherProfile(weather);
+      setHourlyProgress({percent:45,label:'Forecast received; preparing 24 hourly model inputs — 45%'});
       const payload=buildHourlyPredictionRequest(designAtStart,materials,CLIMATE,weather);
       const diagnostics=diagnoseV3Payload(payload.case_inputs);
       if(diagnostics.invalidNumericInputs.length||diagnostics.unsupportedCategories.length){
@@ -468,7 +543,9 @@ function App(){
           : 'A case input is missing or non-finite. Check the design values and try again.');
       }
       setHourlyRequestPayload(payload);
-      const result=await requestHourlyPrediction(payload);
+      const result=await requestHourlyPrediction(payload,{onProgress:(progress)=>{
+        if(operationId===hourlyRunId.current) setMonotonicProgress(setHourlyProgress,progress);
+      }});
       if(operationId!==hourlyRunId.current) return;
       if(!Array.isArray(result?.hours)||result.hours.length!==24
         ||result.hours.some((value,index)=>value!==index)
@@ -477,8 +554,8 @@ function App(){
         ||result.predicted_indoor_temperature_C.some(value=>typeof value!=='number'||!Number.isFinite(value))){
         throw new Error('The hourly API response did not contain 24 finite temperatures for hours 0–23.');
       }
+      setHourlyProgress({percent:95,label:'Validated all 24 hourly temperatures — 95%'});
       setHourlyPrediction(result);
-      setApiStatus({checking:false,connected:true,modelLoaded:true});
       void persistPrediction({
         design:designAtStart,
         designId:designIdAtStart,
@@ -496,6 +573,7 @@ function App(){
     }finally{
       if(operationId===hourlyRunId.current){
         setHourlyPredictionLoading(false);
+        setHourlyProgress(null);
       }
     }
   };
@@ -518,6 +596,7 @@ function App(){
       })}</nav>}
     </header>
     {toast&&<div className="toast">✓ {toast}</div>}
+    {materialStatus.loading&&<div className="app-background-progress"><OperationProgress progress={materialProgress}/></div>}
     {storageNotice&&<div className="persistence-notice" role="status" aria-live="polite">{storageNotice}</div>}
     {page==='overview'&&<Overview onDesign={openDesignWorkspace} onClimate={()=>setPage('climate')} onMaterials={()=>setPage('materials')}/>}
     {page==='design'&&
@@ -530,10 +609,10 @@ function App(){
     onRun={runV3Prediction}
     onOpenHourlySimulation={openHourlySimulation}
     predictionLoading={v3PredictionLoading}
+    predictionProgress={v3PredictionProgress}
     prediction={v3Prediction}
     predictionError={v3PredictionError}
     diagnostics={v3Diagnostics}
-    apiStatus={apiStatus}
     savedDesigns={savedDesigns}
     savedDesignsLoading={savedDesignsLoading}
     savedDesignError={savedDesignError}
@@ -543,6 +622,7 @@ function App(){
     onLoadSavedDesign={loadSavedDesign}
     onRefreshSavedDesigns={refreshSavedDesignList}
     saveDesignLoading={saveDesignLoading}
+    designProgress={designProgress}
     savedDesignId={savedDesignId}
     onBackToOverview={()=>setPage('overview')}
     onContinueToCompare={()=>setPage('compare')}
@@ -555,6 +635,7 @@ function App(){
       materials={materials}
       prediction={hourlyPrediction}
       loading={hourlyPredictionLoading}
+      progress={hourlyProgress}
       error={hourlyPredictionError}
       errorDetail={hourlyPredictionErrorDetail}
       weatherProfile={hourlyWeatherProfile}
@@ -567,6 +648,7 @@ function App(){
     {page==='compare'&&<Compare
       s={s}
       evaluation={candidateEvaluation}
+      progress={candidateProgress}
       onEvaluate={runCandidateEvaluation}
       onApplyCandidate={applyCandidate}
       onBackToDesign={()=>setPage('design')}
@@ -575,6 +657,7 @@ function App(){
     {page==='optimize'&&<Optimize
       s={s}
       evaluation={optimizationEvaluation}
+      progress={optimizationProgress}
       onEvaluate={runOptimizationSearch}
       onApplyCandidate={applyOptimizationCandidate}
       onOpenHourlySimulation={openHourlySimulation}
@@ -583,7 +666,7 @@ function App(){
       onContinueToSimulation={()=>setPage('simulate')}
     />}
     {page==='report'&&(
-      <Report s={s} materials={materials} prediction={v3Prediction} predictionError={v3PredictionError} diagnostics={v3Diagnostics} candidateEvaluation={optimizationEvaluation.status==='idle'?candidateEvaluation:optimizationEvaluation} designHistory={savedDesignId?designHistory:null} onGoDesign={openDesignWorkspace} onBackToSimulation={()=>setPage('simulate')}/>
+      <Report s={s} materials={materials} prediction={v3Prediction} caseWeatherProfile={v3CaseWeatherProfile} predictionError={v3PredictionError} diagnostics={v3Diagnostics} candidateEvaluation={optimizationEvaluation.status==='idle'?candidateEvaluation:optimizationEvaluation} designHistory={savedDesignId?designHistory:null} onGoDesign={openDesignWorkspace} onBackToSimulation={()=>setPage('simulate')}/>
     )}
     <footer>THERMOSHELTER · CLIMATE-RESPONSIVE DESIGN DECISION SUPPORT . CREATED BY TEAM BYTE MEX </footer>
   </div>
@@ -731,13 +814,31 @@ function Overview({onDesign,onClimate,onMaterials}) {
         </div>
       </section>
       <section className="studio-reference-strip">
-        <div><span>REFERENCE CONDITIONS</span><strong>Six regional climate profiles</strong><p>Fixed case-summary inputs. The hourly workflow requests forecast data when run.</p></div>
+        <div><span>REFERENCE CONDITIONS</span><strong>Six reference profiles + Bengaluru forecast</strong><p>Bengaluru case summaries and hourly runs use the next complete local-day forecast; other case summaries use fixed reference inputs.</p></div>
         <div className="studio-reference-note"><span>RESULT SCOPE</span><strong>Case-level rates and modeled-duration energy</strong><p>The hourly model returns indoor temperatures; it does not produce hourly heat-flow values.</p></div>
       </section>
     </main>
   );
 }
-function Design({s,materials,materialStatus,update,updateG,onRun,onOpenHourlySimulation,predictionLoading,prediction,predictionError,diagnostics,apiStatus,savedDesigns,savedDesignsLoading,savedDesignError,savedDesignName,onSavedDesignNameChange,onSaveDesign,onLoadSavedDesign,onRefreshSavedDesigns,saveDesignLoading,savedDesignId,onBackToOverview,onContinueToCompare}) {
+function Design({s,materials,materialStatus,update,updateG,onRun,onOpenHourlySimulation,predictionLoading,predictionProgress,prediction,predictionError,diagnostics,savedDesigns,savedDesignsLoading,savedDesignError,savedDesignName,onSavedDesignNameChange,onSaveDesign,onLoadSavedDesign,onRefreshSavedDesigns,saveDesignLoading,designProgress,savedDesignId,onBackToOverview,onContinueToCompare}) {
+  const totalWallThickness=(s.layerThicknesses?.reduce((sum,value)=>sum+value,0)
+    ??s.layers.reduce((sum,id)=>sum+(materials[id]?.t||0),0));
+  const [wallThicknessDraft,setWallThicknessDraft]=useState(totalWallThickness.toFixed(3));
+  useEffect(()=>setWallThicknessDraft(totalWallThickness.toFixed(3)),[totalWallThickness]);
+
+  const commitWallThickness=()=>{
+    const requested=Number(wallThicknessDraft);
+    if(Number.isFinite(requested)&&requested>0){
+      try{
+        update({layerThicknesses:scaleV3WallThickness(s,materials,requested)});
+        return;
+      }catch{
+        // Restore the current displayed total for an invalid layer assembly.
+      }
+    }
+    setWallThicknessDraft(totalWallThickness.toFixed(3));
+  };
+
   return (
     <main className="section">
 
@@ -768,6 +869,7 @@ function Design({s,materials,materialStatus,update,updateG,onRun,onOpenHourlySim
             Design name
             <input value={savedDesignName} maxLength={120} onChange={event=>onSavedDesignNameChange(event.target.value)} />
           </label>
+
           <button className="primary" onClick={onSaveDesign} disabled={saveDesignLoading}>
             {saveDesignLoading?'Saving design…':'Save Design'}
           </button>
@@ -781,6 +883,7 @@ function Design({s,materials,materialStatus,update,updateG,onRun,onOpenHourlySim
           <button className="ghost" onClick={onRefreshSavedDesigns} disabled={savedDesignsLoading}>
             {savedDesignsLoading?'Refreshing…':'Refresh list'}
           </button>
+          <OperationProgress progress={designProgress}/>
         </div>
         <div className="saved-design-status" role="status" aria-live="polite">
           {savedDesignId&&<span>Current design is linked to a saved record.</span>}
@@ -811,6 +914,10 @@ function Design({s,materials,materialStatus,update,updateG,onRun,onOpenHourlySim
               ))}
             </select>
           </label>
+
+          {usesForecastBackedClimate(s.location)&&<p className="form-field-note">
+            Case summary and hourly inputs use the next complete local-day forecast for this location. The model inputs are shown with the returned prediction.
+          </p>}
 
           <div className="twofields">
 
@@ -901,8 +1008,23 @@ function Design({s,materials,materialStatus,update,updateG,onRun,onOpenHourlySim
           </label>
 
           <div className="live-input-note">
-            The summary model combines the selected primary material with the fixed insulation and concrete layers into effective composite inputs.
+            The summary model combines the selected primary material with insulation and concrete into effective composite inputs. Total wall thickness is shared across those layers.
           </div>
+          <label>
+            Total wall thickness (m)
+            <input
+              id="total-wall-thickness"
+              type="number"
+              min="0.05"
+              step="0.01"
+              value={wallThicknessDraft}
+              onChange={event=>setWallThicknessDraft(event.target.value)}
+              onBlur={commitWallThickness}
+            />
+          </label>
+          <p className="form-field-note">
+            Enter the full selected wall assembly thickness. Its existing layer proportions are scaled to this total; V3 training-range warnings remain visible when the value is outside 0.05–0.40 m.
+          </p>
           <p className="form-field-note">
             Occupant count is sent as design context and saved; the current summary and hourly models do not use it as a model feature.
           </p>
@@ -916,6 +1038,7 @@ function Design({s,materials,materialStatus,update,updateG,onRun,onOpenHourlySim
               ? 'Requesting case estimate...'
               : 'Predict thermal performance →'}
           </button>
+          <OperationProgress progress={predictionLoading?predictionProgress:null}/>
 
         </div>
 
@@ -1258,6 +1381,12 @@ function ClimatePage({onBack}) {
 
       <div className="climate-grid">
         {Object.entries(CLIMATE).map(([id, c]) => {
+          if(c.forecastBacked) return <article className="climate-card climate-reference-card" key={id}>
+            <span>{c.name}</span>
+            <strong>Forecast-backed</strong>
+            <p>Open-Meteo next complete local-day inputs for V3 summary and hourly predictions.</p>
+            <small>{c.elevation} · {c.season}</small>
+          </article>;
           const lower=c.mean-c.amp;
           const upper=c.mean+c.amp;
           const left=clamp(((lower+20)/60)*100,0,100);
@@ -1278,16 +1407,17 @@ function ClimatePage({onBack}) {
 
       <div className="panel climate-profile climate-source-panel">
         <div className="eyebrow">REFERENCE DATA AND FORECASTS</div>
-        <h3>Profiles are reference conditions, not a live forecast.</h3>
+        <h3>Profiles distinguish fixed references from forecast inputs.</h3>
         <p>
-          These temperature ranges, peak radiation, wind, humidity and elevation values are fixed
-          inputs for the case-level summary workflow. Engineering Simulation requests a complete
-          next-day hourly forecast and sends those source values to the hourly model.
+          The six established climate profiles use fixed reference temperature, peak radiation,
+          wind, humidity and elevation values for case-level summaries. Bengaluru uses the next
+          complete local-day Open-Meteo forecast for both case-level and hourly model inputs.
         </p>
         <p>
           For case-summary inputs, outdoor temperature is derived from the profile's mean and daily swing at hour 0;
-          the daily solar input is approximated from peak radiation and six equivalent full-sun hours. These are fixed
-          reference assumptions, not a weather forecast or a model-produced solar-energy result in Wh.
+          the daily solar input is approximated from peak radiation and six equivalent full-sun hours for the six
+          static profiles. Bengaluru's forecast summary uses the forecast day mean, radiation peak and integrated
+          daily radiation values. These are model inputs, not a model-produced solar-energy result in Wh.
         </p>
         <p>
           Weather source: <a href={OPEN_METEO_ATTRIBUTION.url} target="_blank" rel="noreferrer">
@@ -1493,7 +1623,7 @@ function HourlyTemperatureChart({values,targetC,selectedHour,onSelectHour}) {
   </section>;
 }
 
-function Simulation({s,materials,prediction,loading,error,errorDetail,weatherProfile,requestPayload,onRun,onGoDesign,onBackToOptimize,onContinueToReport}) {
+function Simulation({s,materials,prediction,loading,progress,error,errorDetail,weatherProfile,requestPayload,onRun,onGoDesign,onBackToOptimize,onContinueToReport}) {
   const [hour,setHour]=useState(0);
   const predictedValues=prediction?.predicted_indoor_temperature_C;
   const forecastPoints=weatherProfile?.displayPoints;
@@ -1522,6 +1652,7 @@ function Simulation({s,materials,prediction,loading,error,errorDetail,weatherPro
           <h2>{loading?'Requesting 24-hour temperature predictions...':error||'No hourly prediction is available for this design.'}</h2>
           {errorDetail&&<p className="hourly-error-detail">{errorDetail}</p>}
           {loading&&<p>Fetching the external hourly forecast, then requesting 24 indoor-temperature predictions.</p>}
+          {loading&&<OperationProgress progress={progress}/>}
           <div className="hourly-state-actions">
             <button className="primary" onClick={onRun} disabled={loading}>
               {loading?'Requesting 24-hour temperature predictions...':'Retry prediction'}
@@ -1908,9 +2039,11 @@ function V3CandidateResultsTable({rows,targetTemperatureC,onApplyCandidate}) {
   );
 }
 
-function CandidateEvaluationFeedback({evaluation}) {
+function CandidateEvaluationFeedback({evaluation,progress}) {
   if(evaluation.status==='loading') return (
-    <div className="v3-candidate-loading" role="status">Evaluating candidate predictions...</div>
+    <div className="v3-candidate-loading">
+      <OperationProgress progress={progress}/>
+    </div>
   );
   if(!evaluation.errors?.length) return null;
   const visibleErrors=evaluation.errors.slice(0,5);
@@ -1930,7 +2063,7 @@ function CandidateEvaluationFeedback({evaluation}) {
   );
 }
 
-function Compare({s,evaluation,onEvaluate,onApplyCandidate,onBackToDesign,onContinue}) {
+function Compare({s,evaluation,progress,onEvaluate,onApplyCandidate,onBackToDesign,onContinue}) {
   const ranked=rankV3CandidatesByTarget(evaluation.rows,s.target);
   const closest=ranked[0];
   const isLoading=evaluation.status==='loading';
@@ -1952,7 +2085,7 @@ function Compare({s,evaluation,onEvaluate,onApplyCandidate,onBackToDesign,onCont
         </button>
       </div>
 
-      <CandidateEvaluationFeedback evaluation={evaluation}/>
+      <CandidateEvaluationFeedback evaluation={evaluation} progress={progress}/>
 
       {ranked.length>0&&<>
         <div className="compare-summary">
@@ -2011,7 +2144,7 @@ function Compare({s,evaluation,onEvaluate,onApplyCandidate,onBackToDesign,onCont
   );
 }
 
-function Optimize({s,evaluation,onEvaluate,onApplyCandidate,onOpenHourlySimulation,onBackToCompare,onContinueToSimulation}) {
+function Optimize({s,evaluation,progress,onEvaluate,onApplyCandidate,onOpenHourlySimulation,onBackToCompare,onContinueToSimulation}) {
   const ranked=rankV3CandidatesByTarget(evaluation.rows,s.target);
   const closest=ranked[0];
   const isLoading=evaluation.status==='loading';
@@ -2033,7 +2166,7 @@ function Optimize({s,evaluation,onEvaluate,onApplyCandidate,onOpenHourlySimulati
         </button>
       </div>
 
-      <CandidateEvaluationFeedback evaluation={evaluation}/>
+      <CandidateEvaluationFeedback evaluation={evaluation} progress={progress}/>
 
       <div className={`optimization-hero${closest?'':' empty'}`}>
         <div>
@@ -2114,41 +2247,6 @@ function Optimize({s,evaluation,onEvaluate,onApplyCandidate,onOpenHourlySimulati
   );
 }
 
-function v3OutputRows(prediction) {
-  const duration=prediction?.input_summary?.Simulation_Duration_h;
-  const period=typeof duration==='number'&&Number.isFinite(duration)&&duration>0
-    ? `${duration} h case`
-    : 'modeled case';
-  return [
-  ['Average Indoor Temperature', 'Average_Air_Temperature_C', '°C'],
-  ['Minimum Indoor Temperature', 'Minimum_Air_Temperature_C', '°C'],
-  ['Maximum Indoor Temperature', 'Maximum_Air_Temperature_C', '°C'],
-  ['Solar Heat Input Rate', 'Solar_Heat_Input_W', 'W'],
-  ['Case Heat Transfer Rate', 'Heat_Transfer_Rate_W', 'W'],
-  [`Thermal Energy Loss · ${period}`, 'Thermal_Energy_Loss_Wh', 'Wh'],
-  ];
-}
-
-function V3PredictionGrid({prediction}) {
-  if (!prediction?.predictions) return null;
-
-  return (
-    <div className="v3-prediction-grid">
-      {v3OutputRows(prediction).map(([label,key,unit])=>{
-        const value=prediction.predictions[key];
-        return (
-          <div className="v3-prediction-value" key={key}>
-            <small>{label}</small>
-            <strong>{typeof value==='number'&&Number.isFinite(value)
-              ? `${value.toLocaleString(undefined,{maximumFractionDigits:2})} ${unit}`
-              : '—'}</strong>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
 function ModelDiagnostics({prediction,diagnostics}) {
   const outOfRange=diagnostics?.numericOutOfRange||[];
   const warnings=prediction?.warnings||[];
@@ -2221,11 +2319,13 @@ function Ansys({prediction,diagnostics,predictionError,onGoDesign}) {
   );
 }
 
-function Report({s,materials,prediction,predictionError,diagnostics,candidateEvaluation,designHistory,onGoDesign,onBackToSimulation}) {
+function Report({s,materials,prediction,caseWeatherProfile,predictionError,diagnostics,candidateEvaluation,designHistory,onGoDesign,onBackToSimulation}) {
   const climate=CLIMATE[s.location]||CLIMATE.leh;
   const externalTemperature=prediction?.input_summary?.External_Temperature_C
-    ?? getDisplayedOutdoorTemperatureForClimate(climate);
+    ?? (climate.forecastBacked?null:getDisplayedOutdoorTemperatureForClimate(climate));
   const materialConfiguration=s.layers.map((id)=>materials[id]?.name||id).join(' + ');
+  const totalWallThickness=s.layerThicknesses?.reduce((sum,value)=>sum+value,0)
+    ??s.layers.reduce((sum,id)=>sum+(materials[id]?.t||0),0);
   const closest=rankV3CandidatesByTarget(candidateEvaluation?.rows||[],s.target)[0];
   const historicalSummary=latestHistoricalSummary(designHistory);
   const historicalHourly=latestHistoricalHourly(designHistory);
@@ -2257,9 +2357,10 @@ function Report({s,materials,prediction,predictionError,diagnostics,candidateEva
           <div className="eyebrow">DESIGN INPUT SUMMARY</div>
           <div className="report-grid">
             <div><span>Location</span><b>{climate.name}</b></div>
-            <div><span>V3 climate mode</span><b>Static reference profile</b></div>
+            <div><span>V3 climate mode</span><b>{climate.forecastBacked?'Open-Meteo next-day forecast':'Static reference profile'}</b></div>
             <div><span>Shape representation</span><b>Rectangular cuboid</b></div>
-            <div><span>V3 external temperature · reference profile</span><b>{externalTemperature.toFixed(1)}°C</b></div>
+            <div><span>V3 external temperature · {climate.forecastBacked?'forecast day mean':'reference profile'}</span><b>{typeof externalTemperature==='number'?`${externalTemperature.toFixed(1)}°C`:'Run a current prediction'}</b></div>
+            {caseWeatherProfile?.localDate&&<div><span>Weather forecast date</span><b>{caseWeatherProfile.localDate}</b></div>}
             <div><span>Shelter length</span><b>{s.geometry.length} m</b></div>
             <div><span>Shelter width</span><b>{s.geometry.width} m</b></div>
             <div><span>Shelter height</span><b>{s.geometry.height} m</b></div>
@@ -2269,6 +2370,7 @@ function Report({s,materials,prediction,predictionError,diagnostics,candidateEva
             <div><span>Orientation</span><b>{s.geometry.orientation}</b></div>
             <div><span>Target indoor temperature</span><b>{s.target.toFixed(1)}°C</b></div>
             <div className="report-grid-wide"><span>Material configuration</span><b>{materialConfiguration}</b></div>
+            <div><span>Total wall assembly thickness</span><b>{totalWallThickness.toFixed(3)} m</b></div>
           </div>
         </section>
 

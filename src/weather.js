@@ -6,7 +6,7 @@ export const OPEN_METEO_ATTRIBUTION = {
   license: 'CC BY 4.0',
 };
 
-// Coordinates identify the six city presets already offered by the Design page.
+// Coordinates identify the city presets offered by the Design page.
 const WEATHER_LOCATIONS = {
   leh: { name: 'Leh, Ladakh', latitude: 34.1526, longitude: 77.5771 },
   manali: { name: 'Manali, Himachal Pradesh', latitude: 32.2432, longitude: 77.1892 },
@@ -14,6 +14,7 @@ const WEATHER_LOCATIONS = {
   shimla: { name: 'Shimla, Himachal Pradesh', latitude: 31.1048, longitude: 77.1734 },
   jaisalmer: { name: 'Jaisalmer, Rajasthan', latitude: 26.9157, longitude: 70.9083 },
   delhi: { name: 'Delhi, NCR', latitude: 28.6139, longitude: 77.2090 },
+  bengaluru: { name: 'Bengaluru, Karnataka', latitude: 12.9716, longitude: 77.5946 },
 };
 
 const HOURLY_FIELDS = [
@@ -49,6 +50,7 @@ export async function fetchHourlyWeatherProfile(locationId, {
   fetcher = globalThis.fetch,
   now = new Date(),
   signal,
+  timeoutMs = 20000,
 } = {}) {
   const location = WEATHER_LOCATIONS[locationId];
   if (!location) throw new Error(`No hourly forecast location is configured for ${locationId}.`);
@@ -64,22 +66,41 @@ export async function fetchHourlyWeatherProfile(locationId, {
   url.searchParams.set('forecast_days', '3');
 
   let response;
+  const controller = new AbortController();
+  let timedOut = false;
+  const relayAbort = () => controller.abort();
+  signal?.addEventListener('abort', relayAbort, { once: true });
+  if (signal?.aborted) controller.abort();
+  const timeoutId = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, timeoutMs);
+  let body;
+  let unreadableResponse = false;
   try {
     response = await fetcher(url.toString(), {
       headers: { Accept: 'application/json' },
-      ...(signal ? { signal } : {}),
+      signal: controller.signal,
     });
+    if (response.ok) {
+      try {
+        body = await response.json();
+      } catch {
+        unreadableResponse = true;
+      }
+    }
   } catch (error) {
+    if (timedOut) {
+      throw new Error(`Open-Meteo forecast request timed out after ${Math.ceil(timeoutMs / 1000)} seconds.`);
+    }
+    if (signal?.aborted) throw new Error('Open-Meteo forecast request was cancelled.');
     throw new Error(`Open-Meteo forecast request failed: ${error?.message || 'network error'}`);
+  } finally {
+    clearTimeout(timeoutId);
+    signal?.removeEventListener('abort', relayAbort);
   }
   if (!response.ok) throw new Error(`Open-Meteo forecast returned HTTP ${response.status}.`);
-
-  let body;
-  try {
-    body = await response.json();
-  } catch {
-    throw new Error('Open-Meteo returned an unreadable forecast response.');
-  }
+  if (unreadableResponse) throw new Error('Open-Meteo returned an unreadable forecast response.');
 
   const hourly = body?.hourly;
   const timeZone = body?.timezone;
