@@ -4142,15 +4142,6 @@ textarea {
   background: #8ca84f;
 }
 
-.app-background-progress {
-  position: sticky;
-  top: 76px;
-  z-index: 19;
-  padding: 10px 5vw;
-  border-bottom: 1px solid #dfe2d7;
-  background: rgba(246, 247, 242, 0.97);
-}
-
 .saved-design-actions > .operation-progress {
   grid-column: 1 / -1;
 }

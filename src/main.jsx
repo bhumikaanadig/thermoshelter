@@ -56,7 +56,6 @@ function App(){
   const [s,setS]=useState(BASE);
   const [materials,setMaterials]=useState(FALLBACK_MATERIALS);
   const [materialStatus,setMaterialStatus]=useState({loading:true,source:'local_fallback',warning:''});
-  const [materialProgress,setMaterialProgress]=useState({percent:15,label:'Loading the material catalog — 15%'});
   const [savedDesigns,setSavedDesigns]=useState([]);
   const [savedDesignsLoading,setSavedDesignsLoading]=useState(false);
   const [savedDesignError,setSavedDesignError]=useState('');
@@ -100,7 +99,7 @@ function App(){
     let active=true;
     const refreshMaterials=async()=>{
       try{
-        const response=await persistence.getMaterials({onProgress:(progress)=>{if(active) setMaterialProgress(progress);}});
+        const response=await persistence.getMaterials();
         const normalized=normalizeMaterialLibrary(response);
         const requiredIds=Object.keys(FALLBACK_MATERIALS);
         if(requiredIds.some(id=>!normalized[id])||Object.keys(normalized).some(id=>!requiredIds.includes(id))){
@@ -115,8 +114,6 @@ function App(){
           setMaterials(FALLBACK_MATERIALS);
           setMaterialStatus({loading:false,source:'local_fallback',warning:error?.message||'Material data could not be loaded.'});
         }
-      }finally{
-        if(active) setMaterialProgress(null);
       }
     };
     void refreshMaterials();
@@ -596,7 +593,6 @@ function App(){
       })}</nav>}
     </header>
     {toast&&<div className="toast">✓ {toast}</div>}
-    {materialStatus.loading&&<div className="app-background-progress"><OperationProgress progress={materialProgress}/></div>}
     {storageNotice&&<div className="persistence-notice" role="status" aria-live="polite">{storageNotice}</div>}
     {page==='overview'&&<Overview onDesign={openDesignWorkspace} onClimate={()=>setPage('climate')} onMaterials={()=>setPage('materials')}/>}
     {page==='design'&&
@@ -1689,7 +1685,7 @@ function Simulation({s,materials,prediction,loading,progress,error,errorDetail,w
       <div className="simulation-heading">
         <div>
           <h1>Watch the predicted indoor temperature.</h1>
-          <p className="lede">A 24-hour indoor-temperature curve from the hourly model, using the selected location's external weather forecast and current shelter design. The scene below is illustrative only; no spatial temperature or heat-flow field is calculated.</p>
+          <p className="lede">Move the dot to view the hourly temperature.</p>
         </div>
         <div className="simulation-heading-actions">
           <div className={'solver-status '+(loading?'live':'')}>
