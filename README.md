@@ -3,7 +3,7 @@
 SMART INDIA HACKATHON - 2026
 PS : Software Based Model Development for Design of Area Specific Shelter for Thermal Comfort Maintenance.
 
-##LIVE LINK 
+LIVE LINK 
 https://thermoshelter.netlify.app
 
 ## Run in VS Code
